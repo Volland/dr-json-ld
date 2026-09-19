@@ -166,9 +166,11 @@ Keeping payloads out of the model file is a readability decision: a realistic do
 
 ## Distribution
 
-The extension ships to the Marketplace as `pavlyshyn.jsonld-modeler`; the CLI is `ldm` on npm. The CLI is what a pull request runs.
+The extension ships to the Marketplace as `pavlyshyn.jsonld-modeler`; the CLI is `@jsonld-modeler/ldm` on npm, installing a command called `ldm`. The CLI is what a pull request runs.
 
-`ldm` rather than `jsonld`, because `jsonld.js` already publishes a `jsonld` binary and a name collision in a tool whose credibility rests on being the careful one about JSON-LD would be a poor first impression. The extension bundle inlines core so that it is self-contained.
+`ldm` rather than `jsonld`, because `jsonld.js` already publishes a `jsonld` binary and a name collision in a tool whose credibility rests on being the careful one about JSON-LD would be a poor first impression. The bare name `ldm` turned out to be taken too — an unrelated log viewer holds it — so the package is scoped and only the command is short. The command is the name a user types every day; the package name is one they type once.
+
+The extension bundle inlines core so that it is self-contained. The CLI does not: it declares `@jsonld-modeler/core` as an ordinary dependency, because npm can resolve it and a published library is worth more to anyone building on the model than a saved megabyte is.
 
 `tsc` is the typechecker, not the packager. It emits ESM with a bare import of `@jsonld-modeler/core`, and the extension host loads CommonJS and has no way to resolve a workspace package, so the shipped artifact is produced by `packages/vscode/build.mjs`: one CommonJS bundle with core inlined, and one self-contained IIFE for the canvas. A webview is a sandboxed iframe with no module loader, so the canvas cannot be anything else.
 

@@ -1,6 +1,6 @@
 {
   "name": "@jsonld-modeler/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,6 +10,7 @@
     "./schema": "./schema/model.schema.json"
   },
   "files": ["dist", "schema"],
+  "publishConfig": { "access": "public" },
   "scripts": { "build": "tsc --build" },
   "dependencies": {
     "yaml": "^2.6.0"

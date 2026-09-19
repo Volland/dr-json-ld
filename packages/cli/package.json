@@ -1,14 +1,15 @@
 {
-  "name": "ldm",
-  "version": "0.1.0",
+  "name": "@jsonld-modeler/ldm",
+  "version": "0.2.0",
   "license": "MIT",
   "type": "module",
   "bin": { "ldm": "./dist/bin.js" },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": ["dist"],
+  "publishConfig": { "access": "public" },
   "scripts": { "build": "tsc --build" },
   "dependencies": {
-    "@jsonld-modeler/core": "0.1.0"
+    "@jsonld-modeler/core": "0.2.0"
   }
 }

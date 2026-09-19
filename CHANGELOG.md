@@ -4,19 +4,27 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-09-19
+
+### Added — getting started
+
+`ldm init` writes a project and its first model; `ldm init model <name>` adds
+another and registers it in the project file, as a splice that leaves the file's
+comments and ordering intact. The extension contributes the same two as **New
+Project** and **New Model**, and **New Model** now places a model beside the ones
+the enclosing project declares and registers it there.
+
+Both surfaces share one pair of scaffolds in core, so the editor and the CLI
+write the same bytes rather than relying on a test to notice when they stop
+matching. Neither command overwrites an existing model: that would destroy its
+element ids, the one thing in the file that cannot be reconstructed by reading
+it. A scaffolded model keeps its placeholder namespace unless `--prefix` and
+`--base` say otherwise, and both surfaces say so — a placeholder IRI resolves,
+validates and emits exactly as a real one does, so nothing later can catch it.
+
 ## [0.1.0] — 2026-09-19
 
 ### Added — projects, versions and publishing
-
-**Getting started.** `ldm init` writes a project and its first model; `ldm init
-model <name>` adds another and registers it in the project file, as a splice that
-leaves the file's comments and ordering intact. The extension contributes the
-same two as **New Project** and **New Model**. Both surfaces share one pair of
-scaffolds in core, so they write the same bytes. Neither overwrites an existing
-model: doing so would destroy its element ids. A scaffolded model keeps its
-placeholder namespace unless `--prefix` and `--base` say otherwise, and both
-surfaces say so — a placeholder IRI resolves, validates and emits exactly as a
-real one does, so nothing later can catch it.
 
 **Projects.** An `ldm.project.yaml` names the models that belong together, where
 published output goes, and which hosts it must serve from. Commands find it by

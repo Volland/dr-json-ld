@@ -4,16 +4,22 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-09-19
+
+### Added — getting started
+
+**New Project** writes an `ldm.project.yaml` and its first model. **New Model**
+now places the model beside the ones the enclosing project declares and registers
+it there, as an edit that leaves the file's comments and ordering intact.
+
+Both share their scaffolds with `ldm init`, so the editor and the CLI write the
+same bytes. Neither overwrites an existing model — that would destroy its element
+ids — and both say when a model is left carrying the placeholder namespace, since
+a placeholder IRI resolves, validates and emits exactly as a real one does.
+
 ## [0.1.0] — 2026-09-19
 
 ### Added — projects, versions and publishing
-
-**Getting started.** **New Project** writes an `ldm.project.yaml` and its first
-model. **New Model** now places the model beside the ones the enclosing project
-declares and registers it there, as an edit that leaves the file's comments and
-ordering intact. Both share their scaffolds with `ldm init`, so the editor and
-the CLI write the same bytes. Neither overwrites an existing model, and both say
-when a model is left carrying the placeholder namespace.
 
 **Projects.** An `ldm.project.yaml` names the models that belong together, where
 published output goes, and which hosts it must serve from. Commands find it by
