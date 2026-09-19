@@ -44,7 +44,7 @@ what *kind* of change it was.
 ## Install
 
 ```bash
-npm install -g @jsonld-modeler/ldm   # the CLI; the command it installs is `ldm`
+npm install -g @json-ld-modeler/ldm   # the CLI; the command it installs is `ldm`
 ```
 
 The extension is `pavlyshyn.jsonld-modeler` on the Marketplace.

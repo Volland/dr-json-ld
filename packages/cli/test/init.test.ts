@@ -11,7 +11,7 @@ import { rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 
-import { MODEL_SCAFFOLD } from '@jsonld-modeler/core'
+import { MODEL_SCAFFOLD } from '@json-ld-modeler/core'
 
 import { EXIT_OK, EXIT_USAGE, run, type Io } from '../src/index.js'
 

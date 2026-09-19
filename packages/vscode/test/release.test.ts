@@ -10,7 +10,7 @@ import {
   loadProject,
   PROJECT_FILE,
   VersionStore,
-} from '@jsonld-modeler/core'
+} from '@json-ld-modeler/core'
 
 import { NodeHost } from '../src/host/node-host.js'
 import { releaseStateFor } from '../src/release-state.js'

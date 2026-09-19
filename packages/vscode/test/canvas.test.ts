@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { resolveModelText } from '@jsonld-modeler/core'
+import { resolveModelText } from '@json-ld-modeler/core'
 
 import { NodeHost } from '../src/host/node-host.js'
 import { emptyLayout, layoutFileName } from '../src/host/adapter.js'
@@ -418,8 +418,8 @@ describe('the scaffold', () => {
     expect(findings.filter((f) => f.severity === 'error')).toEqual([])
     expect(ir!.terms.every((t) => t.idWritten)).toBe(true)
 
-    const { emit } = await import('@jsonld-modeler/core')
-    const { SourceIndex } = await import('@jsonld-modeler/core')
+    const { emit } = await import('@json-ld-modeler/core')
+    const { SourceIndex } = await import('@json-ld-modeler/core')
     const result = emit(ir!, {
       target: 'context',
       source: SourceIndex.parse(SCAFFOLD, { path: 'new.jsonld.yaml' }),

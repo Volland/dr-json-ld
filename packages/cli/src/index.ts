@@ -49,7 +49,7 @@ import {
   type Finding,
   type Level,
   type TargetName,
-} from '@jsonld-modeler/core'
+} from '@json-ld-modeler/core'
 
 export { EXIT_FINDINGS, EXIT_OK, EXIT_USAGE, nodeIo, UsageError, type Io } from './io.js'
 

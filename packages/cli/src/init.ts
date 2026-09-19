@@ -30,7 +30,7 @@ import {
   ScaffoldError,
   type HostName,
   type Project,
-} from '@jsonld-modeler/core'
+} from '@json-ld-modeler/core'
 
 import { EXIT_OK, UsageError, type Io } from './io.js'
 import type { CommandContext } from './project-commands.js'

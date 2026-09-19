@@ -1,5 +1,5 @@
 /**
- * `@jsonld-modeler/core` — parsing, the IR, resolution, the JSON-LD processor,
+ * `@json-ld-modeler/core` — parsing, the IR, resolution, the JSON-LD processor,
  * validation and every emitter.
  *
  * This package never imports `vscode`.

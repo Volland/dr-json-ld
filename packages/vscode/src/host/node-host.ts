@@ -17,7 +17,7 @@ import {
   VendorStore,
   type Finding,
   type JsonPointer,
-} from '@jsonld-modeler/core'
+} from '@json-ld-modeler/core'
 
 import { applyIntents, type Intent } from '../intents/intent.js'
 import { releaseStateFor } from '../release-state.js'

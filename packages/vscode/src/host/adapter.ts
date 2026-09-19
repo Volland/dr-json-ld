@@ -10,7 +10,7 @@
  *
  * @lat: [[architecture#Architecture#Host Adapter]]
  */
-import type { Finding, JsonPointer } from '@jsonld-modeler/core'
+import type { Finding, JsonPointer } from '@json-ld-modeler/core'
 
 import type { Projection } from '../projection.js'
 import type { Intent } from '../intents/intent.js'

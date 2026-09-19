@@ -12,7 +12,7 @@ import {
   modelAtPath,
   VersionStore,
   type Project,
-} from '@jsonld-modeler/core'
+} from '@json-ld-modeler/core'
 
 import type { ProjectionRelease } from './projection.js'
 

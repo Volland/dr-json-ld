@@ -7,4 +7,4 @@
  *
  * @lat: [[metamodel#Metamodel#Stable Element IDs]]
  */
-export { MODEL_SCAFFOLD as SCAFFOLD } from '@jsonld-modeler/core'
+export { MODEL_SCAFFOLD as SCAFFOLD } from '@json-ld-modeler/core'

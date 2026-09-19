@@ -9,7 +9,7 @@
  *
  * @lat: [[architecture#Architecture#Editing Surface#Intents]]
  */
-import type { Finding, Ir, IrTerm, JsonPointer, Position } from '@jsonld-modeler/core'
+import type { Finding, Ir, IrTerm, JsonPointer, Position } from '@json-ld-modeler/core'
 
 export interface ProjectedTerm {
   /** The element id. Identity, and the key the layout sidecar uses. */

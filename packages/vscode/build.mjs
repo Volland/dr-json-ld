@@ -2,7 +2,7 @@
  * Bundling the extension for distribution.
  *
  * `tsc` typechecks the workspace and emits ESM with a bare import of
- * `@jsonld-modeler/core`, which is neither loadable by the VS Code extension
+ * `@json-ld-modeler/core`, which is neither loadable by the VS Code extension
  * host (it requires CommonJS) nor resolvable on a user's machine (core is a
  * workspace package and is not published to npm). So the shipped artifact is
  * produced here instead: one CommonJS file with core inlined, and one browser

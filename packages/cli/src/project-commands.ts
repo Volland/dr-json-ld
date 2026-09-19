@@ -38,7 +38,7 @@ import {
   type Finding,
   type Project,
   type ProjectModel,
-} from '@jsonld-modeler/core'
+} from '@json-ld-modeler/core'
 
 import { EXIT_FINDINGS, EXIT_OK, UsageError, type Io } from './io.js'
 

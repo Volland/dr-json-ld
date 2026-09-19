@@ -1,5 +1,5 @@
 {
-  "name": "@jsonld-modeler/ldm",
+  "name": "@json-ld-modeler/ldm",
   "version": "0.2.0",
   "license": "MIT",
   "type": "module",
@@ -10,6 +10,6 @@
   "publishConfig": { "access": "public" },
   "scripts": { "build": "tsc --build" },
   "dependencies": {
-    "@jsonld-modeler/core": "0.2.0"
+    "@json-ld-modeler/core": "0.2.0"
   }
 }

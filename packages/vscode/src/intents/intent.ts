@@ -19,7 +19,7 @@ import {
   pointerChild,
   pointerRoot,
   type Splice,
-} from '@jsonld-modeler/core'
+} from '@json-ld-modeler/core'
 
 export type Intent =
   | { kind: 'create-term'; key: string; iri?: string }
