@@ -1,0 +1,254 @@
+schema: spec-driven
+
+context: |
+  # jsonld-modeler
+
+  A VS Code extension and CLI for authoring JSON-LD contexts as a reviewable YAML
+  model, viewing them as two coordinated diagrams — the JSON tree a developer types
+  and the RDF graph it denotes — and generating the `@context` plus its downstream
+  artifacts from a single model. Sibling to `lpg-modeler`, which does the same job
+  for Labeled Property Graph schemas.
+
+  The authoritative design record lives in `lat.md/` and is validated by `lat check`.
+  Read it before proposing anything: `lat locate "<Section>"`, `lat refs "<file>#<Section>"`.
+  Key sections: architecture#Source of Truth, architecture#Package Boundary,
+  architecture#Roadmap, metamodel#Terms, metamodel#Identity, metamodel#Examples,
+  processing#Expansion, processing#Source Mapping, processing#Context Resolution,
+  validation#The Ladder, emitters#Capability Matrix, emitters#Context Target.
+
+  ## Tech stack
+
+  TypeScript throughout. npm workspace monorepo with three packages:
+    - `core`    parsing, IR, resolution, the JSON-LD processor, validation, all
+                emitters. MUST NOT import `vscode` (lint-enforced) so it runs in CI
+                and in plain Node tests.
+    - `cli`     wraps core for continuous integration (`ldm check | emit | import`).
+    - `vscode`  webview and diagnostics plumbing only.
+
+  Models are YAML validated by a JSON Schema contributed via `contributes.jsonValidation`.
+  In-place edits use the `yaml` package Document API so comments, key order, and
+  formatting survive a round trip. Canvas is React Flow (`@xyflow/react`, MIT) with
+  ELK auto-layout (`elkjs`, EPL-2.0). Conformance is checked against the W3C JSON-LD
+  1.1 test suite with `jsonld.js` as a differential oracle.
+
+  ## Domain vocabulary
+
+  Use these terms exactly; do not invent synonyms.
+    model             a YAML file declaring a namespace, terms, examples and shapes
+    IR                resolved intermediate representation; input to every emitter,
+                      to the canvas and to validation
+    term              a mapping from a JSON key to an IRI, plus its JSON-LD facets
+    facet             one JSON-LD keyword on a term (@id, @type, @container,
+                      @language, @protected, @context, @nest, @reverse, @prefix,
+                      @direction)
+    terms layer       the part of a model that is mechanically context-shaped
+    shapes layer      class-level structure: membership, cardinality, ranges,
+                      open/closed. Not expressible in a context
+    shape             one class-level structural declaration
+    example           a declared document with an expected validation outcome
+    element id        short generated stable identifier on every term, shape, example
+    namespace         a model's prefix plus base IRI; the global identity of its terms
+    processing mode   1.0 or 1.1, declared per model; decides which facets are legal
+    active context    the JSON-LD processing state at a point in a document
+    scoped context    a context attached to a term or a type, changing the active
+                      context below that point
+    expansion         the JSON-LD algorithm producing the expanded document form
+    compaction        the inverse of expansion against a context
+    trace             the ordered record of algorithm steps for one expansion
+    source map        the JSON Pointer trail from an expanded node back to its input
+    finding           one validation result: a rule id, a level, a severity, a pointer
+    level             a rung of the validation ladder, L0 to L4
+    rule              a catalogued lint with a stable id, severity and explanation
+    vendored context  an external context fetched once, hash-pinned and committed
+    view              a named subset of a model forming one pair of diagrams
+    pane              one of the canvas's two coordinated representations: tree, graph
+    layout sidecar    diagram coordinates, keyed by element id, nested per view per pane
+    target            a generation destination (context, context-inline, shacl, frame,
+                      jsonschema, vocabulary, types, docs)
+    emitter           IR to artifact for one target
+    capability        a typed declaration of what a target can express
+    downgrade         a model fact a target cannot express; reported as a diagnostic
+    lockfile          canonical stable-ordered IR snapshot committed for diffing
+    change class      additive | compatible | breaking | semantic | illegal
+    host adapter      the interface the webview uses to reach whatever hosts it
+
+  ## Locked decisions - do not relitigate without an explicit new proposal
+
+  1.  The tool is an authoring tool. Validation, visualization, conversion and
+      explanation exist to serve authoring, not as products in their own right.
+  2.  The YAML model is canonical and holds semantics only. The `@context` is an
+      emitted artifact. Layout is a separate sidecar so rearranging a diagram never
+      dirties the semantic diff.
+  3.  An external context is referenced live by default, keeping the array form that
+      JSON-LD's own model of composition assumes. Inlining a flattened snapshot is a
+      separate target that reports the fork as a downgrade.
+  4.  The metamodel has two layers. `terms:` is mechanically context-shaped and
+      emits 1:1. `shapes:` carries structure a context cannot express. Every model
+      fact records which artifacts carry it; a fact no target can carry is a
+      downgrade at its site, never a silent omission.
+  5.  The metamodel covers all of JSON-LD 1.1. A model declares its processing mode;
+      using a 1.1-only facet while targeting 1.0 is a downgrade diagnostic. Coverage
+      is total, visual prominence is curated.
+  6.  Validation is a ladder of five levels, L0 to L4. A real SHACL engine is the
+      authority at L3, running the same SHACL the tool emits. Every finding carries
+      a JSON Pointer and a line/column into the user's own document.
+  7.  Expansion and compaction are implemented here, carrying provenance through
+      every step. Framing, URDNA2015 canonicalization and N-Quads serialization are
+      delegated. Conformance is the W3C JSON-LD 1.1 test suite plus a differential
+      test against `jsonld.js`, never assertion.
+  8.  RDF to JSON-LD is a core conversion: `fromRdf` followed by compaction against
+      the model's own context, so the result is idiomatic rather than raw.
+  9.  No artifact ships that is only snapshotted. Every emitted artifact is executed
+      by an independent implementation of its own standard. Golden files exist to
+      detect unintended churn, never to prove correctness.
+  10. External contexts are vendored, hash-pinned and committed. Every command
+      except an explicit refresh runs with the network off. A hash mismatch is a
+      hard error.
+  11. Element id is identity. The JSON key and the IRI are both mutable attributes of
+      it, and they mean different things: a key change breaks consumers' documents
+      while changing no RDF, an IRI change alters meaning while every document still
+      parses. Renames are detected via ids, never inferred from similarity.
+  12. Changes against the lockfile are classified `additive`, `compatible`,
+      `breaking`, `semantic` or `illegal`. Removing a protected term is illegal.
+      An ambiguous direction classifies as `breaking`.
+  13. Examples are declared in the model, stored as their own files, and carry an
+      expected outcome. A negative example names the finding ids it must produce.
+      The model is self-testing in CI.
+  14. The canvas is two coordinated panes over one model — a JSON-shape tree and an
+      RDF graph — sharing one selection model. A facet that exists on only one side
+      is visibly absent on the other. The gap between the two is the subject of the
+      tool, not an inconvenience.
+  15. The webview is written against a host adapter interface. VS Code is one
+      implementation; a hosted playground would be a second, not a rewrite.
+  16. The guidance catalog is deterministic: every rule has a stable id, a severity,
+      a why, a bad/good pair and a link into the explanation corpus. An LLM layer is
+      optional and clearly labelled, and never produces a diagnostic, an edit or a
+      CI result.
+  17. `core` must never import `vscode`, enforced by lint and by a test that scans
+      the source.
+  18. The repository is its own, separate from `lpg-modeler`. Proven, narrow,
+      stable machinery is shared through an extracted package — YAML targeted
+      splicing, element ids, the layout sidecar, the capability framework. Emitters
+      are not shared: the IRs differ and a common IR would distort both.
+
+  ## Milestones
+
+  M1 (change `add-jsonld-context-modeler`) is a thin vertical slice: every
+  architectural seam exercised once before anything is built on top of it.
+
+  M1 IN:  the terms layer and its JSON Schema; parse, resolve, validate; own
+          expansion and compaction with source mapping and trace; validation L0-L2;
+          emit `context` and `context-inline`; import an existing context;
+          vendored hash-pinned context resolution; examples with expected outcomes;
+          the dual-pane canvas with the layout sidecar and views; CLI `check`,
+          `emit`, `import`, `vendor`.
+  M1 OUT: the shapes layer, SHACL, frame, JSON Schema, vocabulary document, TS
+          types, docs site, RDF import, the lockfile and change classifier, the
+          lint catalog and explanation corpus, the LLM layer, the extracted shared
+          package.
+
+  M2: the shapes layer, the SHACL target, validation L3 executed by a real engine,
+      and the instance-graph overlay. It is the unblocker for every remaining
+      emitter and it completes the validation promise.
+
+  M3+: frame and JSON Schema as a pair, the vocabulary document, TS types and the
+      docs site, RDF import, the lockfile and change classifier as a PR gate, the
+      guidance catalog, and the extracted shared package once duplication with
+      `lpg-modeler` has shown where the seam actually falls.
+
+  Deferred is not cancelled. Every deferred item is accounted for in `lat.md/` and
+  must stay reachable from the design. Nothing may assume a lockfile exists, but the
+  IR serializer orders keys stably so one can be added later. Nothing may assume a
+  shapes layer exists, but the terms layer must not occupy names it will need.
+
+  ## Open questions - resolve in the proposal that first needs them
+
+  These were identified during design and deliberately left open. A change that
+  touches one must settle it explicitly rather than assume.
+
+  - A term is global to a context; cardinality is local to a class. When two shapes
+    use one term with different cardinality, shapes own cardinality and terms own
+    coercion - but the metamodel spec must say so before M2 begins.
+  - How a scoped context is created on the canvas, as opposed to how it is drawn.
+  - Whether named graphs and `@graph` are in the metamodel at all.
+  - Whether the two panes share one layout sidecar with two coordinate spaces.
+  - The aggregation strategy for an instance graph over a large payload.
+  - Where the extracted shared package lives once it exists.
+  - The publishing strategy for an emitted context: stable dereferenceable URLs,
+    versioned paths, content negotiation. The guidance catalog cannot advise on
+    this until the tool has an opinion.
+
+  ## Measured behaviour - do not re-assert from memory
+
+  Nothing is measured yet. As the processor and the emitters are built, record here
+  what was observed rather than what the specification was expected to imply:
+  W3C suite cases that fail and why, divergences from `jsonld.js` and which side is
+  right, SHACL engine behaviour on the shapes actually emitted, and any place where
+  a context that real deployments serve does not match the specification.
+
+rules:
+  proposal:
+    - State which locked decision the change touches, or state that it touches none.
+    - Reworking a locked decision is allowed but must be argued explicitly, naming the
+      decision number and what new information invalidates it.
+    - Always include a "Non-goals" section.
+    - Say which targets are affected (context, context-inline, shacl, frame,
+      jsonschema, vocabulary, types, docs).
+    - If the change is in the M1 OUT list, say why it is being pulled forward.
+    - If the change settles one of the open questions above, say which.
+    - Keep under 500 words.
+
+  specs:
+    - Write requirements in the domain vocabulary above; do not introduce synonyms.
+    - Describe observable behavior of the model, the IR, a finding, or a generated
+      artifact - never internal function names.
+    - A requirement about generated output must state the target it applies to.
+    - A requirement about validation must state the level and the rule id.
+    - Behavior a target cannot express is a downgrade requirement rather than an
+      omission. Say what diagnostic is raised and what appears in the output.
+    - A requirement about the processor must say how conformance is observed.
+
+  design:
+    - Say whether the metamodel changes. If it does, lead with that - it is the least
+      reversible decision and everything downstream depends on it.
+    - Any new target must state its capability set and every downgrade it implies.
+    - Any change to the IR must state the effect on the lockfile and on diffing, even
+      while the lockfile is deferred.
+    - Any change to term naming or namespaces must state the effect on IRI stability
+      and on rename detection.
+    - Any change to the processor must state the effect on the source map and on the
+      trace, and name the W3C suite classes it touches.
+    - Cite the `lat.md/` sections the design depends on by full section id.
+    - Note which package the work lands in; if it lands in `core`, confirm no `vscode`
+      import is introduced.
+
+  tasks:
+    - Break tasks into chunks of max 2 hours.
+    - Processor work requires a conformance task running the relevant W3C suite class
+      and a differential task against `jsonld.js`.
+    - Emitter work requires a golden-file task AND an execution task in which an
+      independent implementation of that standard consumes the output.
+    - Any work that produces findings requires a negative-example task.
+    - Include a task to update the affected `lat.md/` sections.
+    - The final task is always `lat check`.
+
+operations:
+  apply:
+    guidance:
+      - Update `lat.md/` in the same change as the code, never afterwards.
+      - Run `lat check` before reporting the change complete; it must pass.
+      - Do not add a `vscode` import to `core`, even transitively through a shared util.
+      - When a target cannot express something, add a capability entry and a
+        diagnostic. Do not silently drop it and do not widen the metamodel to avoid it.
+      - A finding without a source pointer is not finished. The pointer is the feature.
+      - Never add a network call to a command other than an explicit refresh.
+      - Keep test summaries concise; report failures with the actual output.
+
+  archive:
+    guidance:
+      - Summarize the archive outcome before finishing.
+      - Record any locked decision this change amended, and update the config context.
+      - Record anything measured about the processor, an engine or a real-world
+        context in the "Measured behaviour" section.
+      - Note anything discovered that should move between the milestone lists, and
+        any open question the change settled.

@@ -1,0 +1,71 @@
+# Processing
+
+Expansion and compaction are implemented in this project rather than delegated, because both the validation story and the teaching story need something no library exposes: a record of which input produced which output, and of how it got there.
+
+Writing a JSON-LD processor is the largest single item in the plan and it is not undertaken for independence. It is undertaken for provenance. Every finding the tool reports must point at a position in the user's own document, and every explanation it offers is worth more when it runs on the user's own data than when it paraphrases the specification.
+
+## Expansion
+
+Expansion turns a compacted document into the form the specification defines, resolving every key against the active context and discarding what does not map.
+
+That discarding is the behaviour the tool exists to make visible. Expansion is total: it does not fail on a key it cannot resolve, it drops it, and a document can lose most of its content while every processor involved reports success. A processor that merely returns the expanded form gives no way to see this, which is why the implementation records drops as it makes them rather than reconstructing them afterwards — see [[validation#The Ladder#L2 Lossiness]].
+
+## Compaction
+
+Compaction is the inverse, applying a context to an expanded document to produce idiomatic JSON. It is implemented here for the same reason as expansion, and it is what makes [[processing#RDF Conversion]] produce something a developer would willingly read.
+
+Compaction does not produce a unique shape. Whether a single-valued property appears as a value or a one-element array, and whether a graph wrapper appears at all, depends on the data and on the context. This is why a JSON Schema over the compacted form is only honest when a frame pins the shape first, and it is recorded here so that the deferred [[emitters#Downstream Targets#Frame and JSON Schema]] target is not attempted without one.
+
+## Source Mapping
+
+Every node, value and dropped key in an expansion carries a JSON Pointer back to the input that produced it, and the pointer resolves to a line and column in the file the user edited.
+
+This is the feature. A validation finding expressed in RDF terms is unactionable in a visual tool: the user is looking at their JSON, and being told that a triple failed a shape constraint gives them nothing to click. Correlating input and output after the fact was rejected because it degrades exactly where JSON-LD is confusing — `@nest`, type-scoped contexts, value objects, `@included` — which is precisely where the pointer is most needed. Carrying the pointer through the algorithm costs a field on an internal structure and never degrades.
+
+A finding without a source pointer is not considered finished work.
+
+## Trace
+
+An expansion may be run in traced mode, producing an ordered record of the algorithm's steps: each term lookup, each IRI resolution, each change to the active context, each value coerced, each key dropped.
+
+The trace is the deep explanation feature, and it is a by-product of the instrumentation the source map already requires rather than a separate build. Prose about how JSON-LD works is abundant and mostly unread; the same explanation running on the document the user is currently confused about is not. It is also the only honest way to explain a [[metamodel#Terms#Scoped Contexts|scoped context]], whose whole behaviour is a sequence of active-context changes.
+
+Traced mode is off by default. The trace is large and only the editor and the CLI's explain verb ask for it.
+
+## Conformance
+
+Conformance is observed, not claimed. The processor runs the W3C JSON-LD 1.1 test suite, and every case is additionally run through `jsonld.js` with the two outputs compared.
+
+The suite alone proves the processor handles the cases the working group thought of. The differential test against a reference implementation catches the rest, and — more usefully — turns every disagreement into a question with a right answer, which is recorded in the project config's measured-behaviour section rather than resolved from memory. A case where this project is right and the reference is wrong is a finding worth writing down; assuming it without checking is not.
+
+Cases the processor does not pass are listed rather than hidden, with the reason and whether it is intended.
+
+## Delegated Algorithms
+
+Framing, URDNA2015 canonicalization and N-Quads serialization are delegated to existing libraries rather than implemented here.
+
+The line is drawn at provenance. Expansion and compaction are on the path between what the user wrote and what the tool reports, so they must carry pointers. Canonicalization is a pure function over an already-expanded graph with no user-facing intermediate steps, and framing — while user-facing — operates on expanded output whose pointers already exist. Implementing them would add risk and conformance surface for no provenance gain.
+
+## Context Resolution
+
+A model's [[metamodel#Composition|referenced contexts]] are resolved from a vendored copy in the repository, never from the network, except during an explicit refresh.
+
+Resolution is what makes authoring intelligent: completion over terms the model does not declare, detection of a term that collides with an upstream one, and the check that a redefinition does not violate an upstream `@protected`. None of that is possible if a referenced context is an opaque string, and none of it should require a network connection to be reliable.
+
+### Vendoring
+
+An explicit command fetches each referenced context once, writes it into a committed directory, and records its integrity hash in the model. A mismatch between the recorded hash and the vendored file is a hard error.
+
+This is the lockfile lesson, applied to a dependency that is unusually easy to overlook. An upstream context can be edited by its publisher with no commit on your side, and every artifact you emit and every validation you run would change meaning underneath you. Vendoring turns that into a reviewable diff produced by a deliberate act. The cost is that someone must refresh, which is the correct place for the cost to fall.
+
+### Offline by default
+
+Every command other than the refresh runs with no network access at all.
+
+Reproducibility is the first reason: a build that fetches is a build that can fail or change for reasons no commit explains, and air-gapped continuous integration is a normal requirement. The second reason is narrower and sharper. A model file names the URLs to fetch, so a command that fetches what a model tells it to, running in continuous integration against a pull request from outside, is a request-forgery primitive. The refresh command is the one place that risk exists, and it is invoked by a person rather than by a pipeline.
+
+## RDF Conversion
+
+RDF in any of the usual syntaxes converts to JSON-LD by the specification's own algorithm and is then compacted against the model's context, so the result is idiomatic rather than raw expanded form.
+
+The second half is what makes this worth shipping. Converting Turtle to expanded JSON-LD is a solved problem available in several libraries and produces output nobody wants to read. Compacting it against a context the user controls produces the JSON their application would actually use, which is the reason they wanted the conversion. It is deferred past milestone 1 but is a core conversion rather than an add-on.
