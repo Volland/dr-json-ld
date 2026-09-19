@@ -1,0 +1,6 @@
+{
+  "@id": "https://example.org/things/1",
+  "name": "Ada Lovelace",
+  "author": { "@id": "https://example.org/people/ada" },
+  "tags": ["mathematics", "computing"]
+}

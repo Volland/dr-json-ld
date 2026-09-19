@@ -1,0 +1,96 @@
+/* The canvas. Colours come from VS Code's theme variables so the panes match
+   whatever the user is already reading. */
+:root {
+  --gap: 12px;
+}
+
+body {
+  margin: 0;
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-foreground, #333);
+  background: var(--vscode-editor-background, #fff);
+}
+
+.canvas { display: flex; flex-direction: column; height: 100vh; }
+
+.banner {
+  padding: 8px var(--gap);
+  background: var(--vscode-inputValidation-warningBackground, #fff4ce);
+  border-bottom: 1px solid var(--vscode-inputValidation-warningBorder, #d9b300);
+}
+
+.toolbar {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  padding: 8px var(--gap);
+  border-bottom: 1px solid var(--vscode-panel-border, #ddd);
+}
+
+.ask {
+  display: flex;
+  gap: var(--gap);
+  align-items: center;
+  padding: 8px var(--gap);
+  background: var(--vscode-editorWidget-background, #f3f3f3);
+  border-bottom: 1px solid var(--vscode-panel-border, #ddd);
+}
+.ask label { display: flex; gap: 6px; align-items: center; }
+
+.panes { display: grid; grid-template-columns: 1fr 1fr 280px; flex: 1; min-height: 0; }
+.pane, .inspector { overflow: auto; padding: var(--gap); }
+.pane { border-right: 1px solid var(--vscode-panel-border, #ddd); }
+.pane h2, .inspector h2 { font-size: 1em; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; }
+
+.tree-row button {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+.tree-row.selected > button { background: var(--vscode-list-activeSelectionBackground, #0a64c8); color: var(--vscode-list-activeSelectionForeground, #fff); }
+.tree-row .key { font-weight: 600; }
+.tree-row .shape { opacity: 0.75; }
+
+/* A scoped context is a region, not an annotation: its effect is positional. */
+.region {
+  margin: 4px 0 4px 16px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--vscode-textLink-foreground, #0a64c8);
+  background: var(--vscode-textBlockQuote-background, rgba(0, 0, 0, 0.04));
+}
+
+/* Absence is drawn rather than left blank. */
+.absence {
+  margin-top: var(--gap);
+  padding: 8px;
+  border: 1px dashed var(--vscode-panel-border, #bbb);
+  opacity: 0.85;
+}
+
+.graph { display: flex; flex-direction: column; }
+.graph .react-flow { flex: 1; min-height: 240px; }
+.graph-node.literal { border-style: dashed; }
+
+.inspector .iri { font-family: var(--vscode-editor-font-family, monospace); opacity: 0.8; word-break: break-all; }
+.inspector .warn { color: var(--vscode-inputValidation-warningForeground, #7a5b00); }
+.facet { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.facet span { opacity: 0.7; }
+.raw textarea { width: 100%; font-family: var(--vscode-editor-font-family, monospace); }
+
+/* Versions and aliases: shown, never edited. Changing either is a deliberate
+   act with consequences for every consumer, so it belongs at a command line. */
+.release { margin-top: var(--gap); border-top: 1px solid var(--vscode-panel-border, #ddd); padding-top: var(--gap); }
+.release .project { opacity: 0.75; }
+.release ul { list-style: none; margin: 0; padding: 0; }
+.release li { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; }
+.release code { font-family: var(--vscode-editor-font-family, monospace); }
+.release li span { opacity: 0.7; font-size: 0.9em; }
+.release li.unverified { color: var(--vscode-errorForeground, #b00); }
+.release .hint { opacity: 0.75; font-size: 0.9em; }

@@ -1,0 +1,21 @@
+{
+  "name": "@jsonld-modeler/core",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./schema": "./schema/model.schema.json"
+  },
+  "files": ["dist", "schema"],
+  "scripts": { "build": "tsc --build" },
+  "dependencies": {
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "jsonld": "^8.3.2",
+    "@types/jsonld": "^1.5.15"
+  }
+}

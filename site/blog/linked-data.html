@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What linked data is for, and what it costs — Dr. JSON-LD</title>
+<meta name="description" content="Which of linked data's bets pay off at your scale, and the one question that decides it: whether your identifiers have to survive leaving your database.">
+<link rel="icon" href="../assets/img/mark.svg">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="brand" href="../">
+      <img src="../assets/img/mark.svg" alt="">
+      <span>Dr. JSON-LD<small>apothecary for linked data</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="../">The tool</a>
+      <a href="../book/">Handbook</a>
+      <a href="./" aria-current="page">Notes</a>
+      <a href="https://github.com/Volland/dr-json-ld">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <article class="prose prose--wide">
+
+    <p class="post-meta"><span>2026-08-11</span><span>12 min</span><span>Linked data</span></p>
+    <h1 style="font-size:clamp(1.9rem,4vw,2.7rem);line-height:1.12;margin:0 0 1.5rem;font-weight:600">
+      What linked data is for, and what it costs
+    </h1>
+
+    <p class="lede">
+      Ask an engineer under forty what the semantic web was and you will usually get a
+      polite shrug, or a story about OWL reasoners in 2006 that ends badly. Ask the same
+      engineer whether they have shipped schema.org markup, consumed an ActivityPub feed,
+      handled a DID document, or integrated a verifiable credential, and the answer is
+      frequently yes to several. The vision did not arrive. Parts of the plumbing did, and
+      those parts are now load-bearing in places most people never look.
+    </p>
+
+    <p>
+      That gap is worth taking seriously, because it tells you which of linked data's bets
+      actually paid off. It was never one idea. It was a stack of them, and they have very
+      different track records.
+    </p>
+
+    <h2>The bets, scored</h2>
+
+    <p>
+      <strong>Global identifiers won, completely.</strong> The proposal was that the thing
+      you are talking about should have a name that is unique across the whole internet,
+      not across your one database — and that the name should be a URL, so that anyone who
+      finds it has somewhere to look. This is now so ordinary that it is invisible. Every
+      OAuth issuer, every OCI image reference, every DID, every package coordinate is an
+      instance of it. Nobody calls it the semantic web because nobody needs to.
+    </p>
+
+    <p>
+      <strong>A shared data model mostly won.</strong> Subject, predicate, object — the
+      triple — turns out to be a fine lowest common denominator for merging data from
+      sources that never coordinated. Two datasets about the same IRI combine by
+      concatenation. There is no schema negotiation, no migration, no join key to agree
+      on. That is a genuinely unusual property and it is the reason RDF keeps quietly
+      reappearing in knowledge-graph projects that started out swearing they would use
+      property graphs.
+    </p>
+
+    <p>
+      <strong>Formal ontology and inference largely lost</strong>, at least as a default.
+      OWL's expressive power came with a cost curve most teams could not justify, and the
+      promised payoff — machines deriving facts you did not state — turned out to be
+      something most systems either do not need or would rather do explicitly, in code
+      they can debug. There are real exceptions in biomedicine, in aerospace, in
+      regulatory compliance. They are exceptions.
+    </p>
+
+    <p>
+      <strong>And RDF/XML lost so thoroughly</strong> that it very nearly took the
+      identifiers and the data model down with it. Syntax matters more than architects
+      like to admit. JSON-LD exists because someone eventually noticed that the model was
+      fine and the encoding was repelling everyone.
+    </p>
+
+    <div class="callout">
+      <img src="../assets/img/codex.svg" alt="">
+      <p>
+        <strong>The score, roughly.</strong> Identifiers: unambiguous win. Merge-by-IRI
+        data model: quiet win. Inference: niche. Syntax: a decade lost and recovered. If
+        you are deciding whether to adopt linked data, you are deciding about the first
+        two, and you can decline the third.
+      </p>
+    </div>
+
+    <h2>The question that decides it</h2>
+
+    <p>
+      Here is the way to make this concrete for a specific system.
+      <strong>Do your identifiers have to survive leaving your database?</strong>
+    </p>
+
+    <p>
+      If the answer is no — if every consumer of your data is a service you operate, if a
+      record is only ever joined against records from the same system, if the vocabulary
+      is settled by a Slack message — then linked data is overhead. Use integer primary
+      keys and an OpenAPI schema. You will be happier and nothing will be lost. This is
+      most software.
+    </p>
+
+    <p>
+      The answer becomes yes under a few specific pressures, and they are recognisable:
+    </p>
+
+    <ul>
+      <li>
+        <strong>Data arrives from parties you do not control</strong>, and you cannot
+        require them to adopt your field names. Aggregators, registries, standards bodies,
+        public-sector integrations.
+      </li>
+      <li>
+        <strong>Data leaves and must still mean something years later</strong>, verified
+        or re-read by software you will never see. Credentials, archives, provenance
+        records, anything with a legal shelf life.
+      </li>
+      <li>
+        <strong>The vocabulary itself is a deliverable</strong> — you are publishing a
+        standard, and the whole point is that strangers implement against it.
+      </li>
+      <li>
+        <strong>Datasets keep having to be merged</strong> and every merge costs a
+        bespoke mapping project. This is the one that sneaks up on people: the fifth
+        mapping is when merge-by-IRI starts looking cheap.
+      </li>
+    </ul>
+
+    <p class="margin-note">
+      Note that none of these are about scale. A small system publishing a standard needs
+      this. A very large system with one owner does not.
+    </p>
+
+    <h2>What it actually costs</h2>
+
+    <p>
+      The honest accounting matters, because the advocacy literature is bad at it. Three
+      costs, in order of how much they hurt.
+    </p>
+
+    <h3>You have to decide what your terms mean</h3>
+
+    <p>
+      This is presented as a cost of linked data. It is really a cost you were already
+      paying, moved somewhere visible. A field called <code>status</code> with five
+      possible string values has an unwritten specification today, living in the heads of
+      four people and in a switch statement. Minting
+      <code>https://vocab.example.org/status</code> and writing down what it means forces
+      the conversation early, and the conversation is unpleasant precisely because the
+      ambiguity was load-bearing.
+    </p>
+
+    <p>
+      So the real cost is organisational, not technical, and it is front-loaded. Budget
+      for a week of arguments that would otherwise have been a year of incidents.
+    </p>
+
+    <h3>The tooling assumes you know the model</h3>
+
+    <p>
+      This one is a genuine, unambiguous cost, and it is where most adoptions stall. The
+      RDF ecosystem's tooling is written by people who know RDF, for people who know RDF.
+      Error messages assume the model. Libraries expose the algorithms rather than the
+      task. And JSON-LD specifically has the property discussed at length in the
+      <a href="../book/#expansion">handbook</a>: it does not fail on input it does not
+      understand, it drops it.
+    </p>
+
+    <div class="callout callout--warn">
+      <img src="../assets/img/mortar.svg" alt="">
+      <p>
+        <strong>A team's first six months with JSON-LD are usually spent discovering
+        loss.</strong> A field is missing downstream. Someone adds it to the context. Two
+        weeks later a different field is missing. The cause is structural — expansion is
+        total — and the fix is not more care, it is a tool that reports what expansion
+        discarded, wired into CI on day one rather than month eight.
+      </p>
+    </div>
+
+    <h3>Context resolution is a runtime dependency</h3>
+
+    <p>
+      The third cost is the one that surprises operators rather than developers. A
+      document that references <code>https://www.w3.org/ns/credentials/v2</code> needs
+      that document to read it. In the naive implementation, that is an HTTP request, in
+      your hot path, to someone else's server, whose contents can change.
+    </p>
+
+    <p>
+      Every serious deployment ends up caching contexts locally, and most do it after an
+      incident rather than before. Do it before: fetch each referenced context once,
+      commit it, record its hash, and have every other code path read only the committed
+      copy. Then an upstream editorial change appears as a diff in a pull request instead
+      of as a Tuesday-morning behaviour shift, and your build does not depend on a
+      stranger's uptime. There is a security argument on top of the availability one —
+      a build step that fetches URLs named in an untrusted document is a
+      request-forgery primitive — but the availability argument alone is sufficient.
+    </p>
+
+    <h2>What you get, concretely</h2>
+
+    <p>
+      Against those costs, the returns are narrower than the pitch and better than the
+      scepticism.
+    </p>
+
+    <p>
+      <strong>Integration cost stops scaling with the number of partners.</strong> Two
+      systems that both use <code>https://schema.org/name</code> need no mapping for that
+      field. Not a cheap mapping — none. The n-squared curve of pairwise integrations
+      flattens for every term that is shared, which in practice is the boring 80% of any
+      schema: names, identifiers, dates, addresses, organisations.
+    </p>
+
+    <p>
+      <strong>Extension stops being a negotiation.</strong> Anyone can say something new
+      about your IRI without asking you, and the statement merges cleanly with yours.
+      There is no version bump, no reserved extension block, no <code>x-</code> prefix
+      convention. This is the property that makes linked data the right substrate for
+      ecosystems with no central authority, which is why it keeps winning in
+      standards contexts and losing inside single companies.
+    </p>
+
+    <p>
+      <strong>Data outlives its schema.</strong> A document whose keys are IRIs remains
+      interpretable when the API that produced it is gone, the company is gone, and the
+      documentation is gone — because the meaning is in the identifiers, not in a wiki.
+      For a ten-year archive this is not a nicety.
+    </p>
+
+    <h2>The adoption path that works</h2>
+
+    <p>
+      For a team that has decided yes, the ordering matters more than any individual
+      decision:
+    </p>
+
+    <ol>
+      <li>
+        <strong>Reuse before you mint.</strong> Check schema.org, then the domain
+        vocabularies, then the W3C ones. A term someone else defined and you reuse is
+        worth more than a better term only you use. Most of your first vocabulary should
+        not be yours.
+      </li>
+      <li>
+        <strong>Start with one document type.</strong> Not the whole domain. One document
+        that already crosses a boundary, modelled properly end to end, teaches more than a
+        six-month ontology exercise and produces something shippable.
+      </li>
+      <li>
+        <strong>Put a loss check in CI immediately.</strong> Before the second document
+        type. Real example documents, expanded, with every dropped key reported as a
+        failure. This is the single highest-leverage thing on the list and it is almost
+        always done last.
+      </li>
+      <li>
+        <strong>Vendor every referenced context.</strong> Hashes committed. No network in
+        any command except an explicit, human-invoked refresh.
+      </li>
+      <li>
+        <strong>Version the vocabulary from the first publish</strong>, immutably, at
+        content-addressed URLs, with human-readable labels layered on top as movable
+        pointers. Retrofitting immutability onto a URL people already depend on is not
+        possible, only apologised for.
+      </li>
+      <li>
+        <strong>Add inference last, or never.</strong> It is the part of the stack with
+        the worst cost-to-value ratio for most teams, and declining it costs you nothing
+        else on this list.
+      </li>
+    </ol>
+
+    <p>
+      Linked data is not a philosophy to adopt. It is a set of engineering trades with a
+      clear trigger condition: identifiers that must survive leaving your database. If
+      that describes you, the trades are good, and the failure modes are well enough
+      understood by now that they can be tooled rather than suffered. If it does not, the
+      honest advice is to keep your integer keys and read something else.
+    </p>
+
+    <div class="pager">
+      <a href="./">← All notes</a>
+      <a href="verifiable-credentials.html">The context you sign →</a>
+    </div>
+
+    <img class="fleuron" src="../assets/img/fleuron.svg" alt="">
+
+  </article>
+</main>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <div>
+      <h2>Read</h2>
+      <ul>
+        <li><a href="../book/">The JSON-LD handbook</a></li>
+        <li><a href="linked-data.html">What linked data is for</a></li>
+        <li><a href="verifiable-credentials.html">The context you sign</a></li>
+        <li><a href="graphs.html">Two pictures of the same graph</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Build</h2>
+      <ul>
+        <li><a href="../">The tool</a></li>
+        <li><a href="https://github.com/Volland/dr-json-ld">Source on GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/ldm">ldm on npm</a></li>
+      </ul>
+    </div>
+    <p class="footer__note">
+      Dr. JSON-LD is MIT licensed. A checksum detects accident and casual tampering; it
+      is not a signature, and nothing here implies otherwise.
+    </p>
+  </div>
+  <div class="footer__legal">
+    <span>&copy; 2026 Wolodymyr Pawlyshyn</span>
+    <a href="../impressum.html">Impressum</a>
+    <a href="../datenschutz.html">Datenschutz</a>
+    <a href="../agb.html">AGB</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,102 @@
+# A catalogue vocabulary, exercising every container form, a referenced
+# context, a scoped context, and a document that silently loses most of itself.
+#
+# This file is *about* JSON-LD; it is not itself JSON-LD.
+
+jsonld: "1"
+
+namespace:
+  prefix: cat
+  base: https://example.org/catalogue#
+
+mode: "1.1"
+
+prefixes:
+  schema: https://schema.org/
+
+# A context this model builds on but does not own. Referenced, not flattened —
+# the consumer keeps receiving upstream corrections.
+uses:
+  - iri: https://example.org/vocab/core.jsonld
+    integrity: sha256-WZwfPfTIOcvBUKKdEsMkNQ1tVRt2VBt3vguzlgqP4oU=
+
+terms:
+  # `title` is defined upstream; this model does not redefine it.
+
+  # A language map: the JSON is a map from language tag to string, and the
+  # graph pane has nothing to draw for the container.
+  label:
+    id: lab001
+    "@id": schema:name
+    "@container": "@language"
+    note: The display name, per language.
+
+  # `@set` is the closest thing JSON-LD has to future-proofing: always an array,
+  # so a property that becomes multi-valued later does not change the shape of
+  # every document that already exists.
+  tags:
+    id: tag001
+    "@id": cat:tag
+    "@container": "@set"
+
+  # An ordered list. The one container that does change the triples.
+  chapters:
+    id: cha001
+    "@id": cat:chapter
+    "@container": "@list"
+    "@type": "@id"
+
+  byIndex:
+    id: idx001
+    "@id": cat:byIndex
+    "@container": "@index"
+
+  byId:
+    id: bid001
+    "@id": cat:byId
+    "@container": "@id"
+
+  byType:
+    id: typ001
+    "@id": cat:byType
+    "@container": "@type"
+
+  asGraph:
+    id: grp001
+    "@id": cat:asGraph
+    "@container": "@graph"
+
+  # A scoped context: below this point, `title` means something else. Its effect
+  # is positional, which is why the tree pane draws it as a region.
+  detail:
+    id: det001
+    "@id": cat:detail
+    "@context":
+      title: https://example.org/catalogue#detailTitle
+
+examples:
+  - id: exa001
+    path: documents/catalogue-ok.json
+    note: Exercises every container form and the referenced context.
+    expect: { ok: true, maxSeverity: info }
+
+  # A document that silently loses most of its content. Expansion succeeds and
+  # the payload is gone — the failure this project exists to make visible.
+  - id: exa002
+    path: documents/catalogue-empties.json
+    note: Every key maps to nothing; expansion succeeds and the document empties.
+    expect:
+      rules:
+        - L2.key-dropped
+
+  - id: exa003
+    path: documents/catalogue-uncoerced.json
+    note: "A value that reads as an IRI under a term with no @type: @id coercion."
+    expect:
+      rules:
+        - L2.coercion-did-not-fire
+
+views:
+  - id: viw001
+    name: Containers
+    terms: [label, tags, chapters, byIndex, byId, byType, asGraph, detail]

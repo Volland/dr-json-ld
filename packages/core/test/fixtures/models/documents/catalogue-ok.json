@@ -1,0 +1,36 @@
+{
+  "@id": "https://example.org/catalogue/1",
+  "title": "A Catalogue",
+  "label": {
+    "en": "A Catalogue",
+    "fr": "Un catalogue"
+  },
+  "curator": "https://example.org/people/ada",
+  "tags": [
+    "reference"
+  ],
+  "chapters": [
+    {
+      "@id": "https://example.org/catalogue/1/a",
+      "title": "First"
+    },
+    {
+      "@id": "https://example.org/catalogue/1/b",
+      "title": "Second"
+    }
+  ],
+  "byIndex": {
+    "one": {
+      "@id": "https://example.org/catalogue/1/a"
+    }
+  },
+  "byId": {
+    "https://example.org/catalogue/1/b": {
+      "title": "Second again"
+    }
+  },
+  "detail": {
+    "@id": "https://example.org/catalogue/1/detail",
+    "title": "A scoped title"
+  }
+}

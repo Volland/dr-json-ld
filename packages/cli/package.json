@@ -1,0 +1,14 @@
+{
+  "name": "ldm",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "ldm": "./dist/bin.js" },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": { "build": "tsc --build" },
+  "dependencies": {
+    "@jsonld-modeler/core": "0.1.0"
+  }
+}

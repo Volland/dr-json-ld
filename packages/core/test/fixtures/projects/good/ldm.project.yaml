@@ -1,0 +1,11 @@
+project: "1"
+name: catalogue-suite
+note: Two models that reference one another, used to exercise the project path.
+
+models:
+  catalogue: models/catalogue.jsonld.yaml
+  people: models/people.jsonld.yaml
+
+published: published
+versions: versions
+hosts: [plain, github-pages]

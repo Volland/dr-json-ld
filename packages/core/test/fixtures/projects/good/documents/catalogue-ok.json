@@ -1,0 +1,5 @@
+{
+  "@id": "https://example.org/catalogue/1",
+  "title": "A Catalogue",
+  "curator": "https://example.org/people/ada"
+}

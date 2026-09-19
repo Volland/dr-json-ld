@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Alembic">
+  <g fill="none" stroke="#7a5230" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M26 8 h12 v14 l10 18 c4 7 -1 16 -9 16 H25 c-8 0 -13 -9 -9 -16 l10 -18 Z" fill="#fffbf4"/>
+    <path d="M26 22 h12"/>
+    <path d="M45 34 c8 0 10 6 10 12" stroke="#c2551d"/>
+  </g>
+  <path d="M18 42 c6 4 22 4 28 0 3 6 -1 12 -7 12 H25 c-6 0 -10 -6 -7 -12 Z" fill="#fae3d1" stroke="none"/>
+  <g fill="#1b4f8c"><circle cx="27" cy="47" r="2.5"/><circle cx="36" cy="49" r="2.5"/><circle cx="32" cy="43" r="2"/></g>
+</svg>

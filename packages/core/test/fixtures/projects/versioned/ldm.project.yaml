@@ -1,0 +1,15 @@
+# A project whose second model builds on a version the first one published.
+# The reference resolves from the published tree, with no network and no second
+# vendored copy of bytes that are already in the repository.
+
+project: "1"
+name: versioned-suite
+baseUrl: https://vocab.example.org/
+
+models:
+  core: models/core.jsonld.yaml
+  catalogue: models/catalogue.jsonld.yaml
+
+published: published
+versions: versions
+hosts: [plain, github-pages, s3]

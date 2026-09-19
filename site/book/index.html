@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A JSON-LD Handbook — Dr. JSON-LD</title>
+<meta name="description" content="A short book about JSON-LD: expansion, term definitions, coercion, containers, scoped contexts, compaction, and publishing a context you cannot take back.">
+<link rel="icon" href="../assets/img/mark.svg">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="brand" href="../">
+      <img src="../assets/img/mark.svg" alt="">
+      <span>Dr. JSON-LD<small>apothecary for linked data</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="../">The tool</a>
+      <a href="./" aria-current="page">Handbook</a>
+      <a href="../blog/">Notes</a>
+      <a href="https://github.com/Volland/dr-json-ld">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="hero">
+    <div>
+      <p class="eyebrow">A minibook in nine chapters</p>
+      <h1>A JSON-LD <em>Handbook</em></h1>
+      <p class="hero__lede">
+        Everything that actually bites, in the order it bites you. Written for someone
+        who can read JSON, has seen a <code>@context</code>, and would like to stop
+        guessing. About an hour end to end.
+      </p>
+    </div>
+    <img class="hero__art" src="../assets/img/codex.svg" alt="An open codex">
+  </div>
+
+  <div class="book-layout">
+
+    <nav class="toc" aria-label="Chapters">
+      <h2>Chapters</h2>
+      <ol>
+        <li><a href="#why">Why a context at all</a></li>
+        <li><a href="#expansion">Expansion, the only algorithm that matters</a></li>
+        <li><a href="#terms">The term definition</a></li>
+        <li><a href="#coercion">Coercion: <code>@type</code></a></li>
+        <li><a href="#containers">Containers</a></li>
+        <li><a href="#scoped">Scoped contexts and position</a></li>
+        <li><a href="#keywords">Vocab, base, protection</a></li>
+        <li><a href="#compaction">Compaction and the round trip</a></li>
+        <li><a href="#publishing">Publishing a context</a></li>
+      </ol>
+      <p style="margin-top:1.5rem;font-size:0.86rem;color:var(--ink-faint)">
+        Every example here is real JSON-LD 1.1. Paste it into
+        <code>ldm explain</code> and watch it move.
+      </p>
+    </nav>
+
+    <div class="prose prose--wide">
+
+      <!-- ------------------------------------------------------------ 1 -- -->
+      <section class="chapter" id="why">
+        <p class="chapter__num">Chapter one</p>
+        <h2>Why a context at all</h2>
+
+        <p class="lede">
+          Two teams each ship a JSON document with a field called <code>name</code>. One
+          means the legal name of a company. The other means the display name of a user
+          account. Both are correct. Neither is wrong. And when the two documents land in
+          the same database, something has to decide whether those fields are the same
+          field.
+        </p>
+
+        <p>
+          JSON has no answer. A key in JSON is a string in a namespace of one document.
+          The meaning lives in the documentation, or in the head of whoever wrote the
+          integration, and it does not travel with the data.
+        </p>
+
+        <p>
+          JSON-LD's answer is minimal and worth stating plainly: <strong>a
+          <code>@context</code> maps the short keys people want to type onto IRIs, which
+          are globally unique.</strong> Once <code>name</code> means
+          <code>https://schema.org/name</code>, two documents that use that IRI are
+          talking about the same thing, and two that do not, are not. Nothing else in
+          JSON-LD is as important as this sentence.
+        </p>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: { <span class="t-key">"name"</span>: <span class="t-str">"https://schema.org/name"</span> },
+  <span class="t-key">"name"</span>: <span class="t-str">"Ada Lovelace"</span>
+}</code></pre>
+
+        <p>
+          That document says one thing: some unnamed subject has a
+          <code>https://schema.org/name</code> of <code>"Ada Lovelace"</code>. A consumer
+          who has never heard of your API can read it. That is the whole pitch.
+        </p>
+
+        <h3>What a context is not</h3>
+
+        <p>
+          A context is <em>not a schema</em>. It does not say which fields are required,
+          what a valid value looks like, or which fields may appear together. It has no
+          notion of an error. This surprises people who arrive from JSON Schema or
+          OpenAPI, and it is the root of most JSON-LD pain.
+        </p>
+
+        <div class="callout callout--warn">
+          <img src="../assets/img/mortar.svg" alt="">
+          <p>
+            <strong>A context cannot reject your document.</strong>
+            It can only translate the parts it recognises and discard the parts it does
+            not. A validation layer is a separate thing you must add — SHACL, ShEx, JSON
+            Schema, or a tool that reports lossiness. None of it is in the context.
+          </p>
+        </div>
+
+        <p>
+          So the question to hold through the rest of this book is not <em>is my document
+          valid?</em> — the answer is always yes. It is <em>how much of my document
+          survived, and does what survived mean what I intended?</em>
+        </p>
+      </section>
+
+      <!-- ------------------------------------------------------------ 2 -- -->
+      <section class="chapter" id="expansion">
+        <p class="chapter__num">Chapter two</p>
+        <h2>Expansion, the only algorithm that matters</h2>
+
+        <p class="lede">
+          Everything a JSON-LD processor does begins by throwing the context away.
+          Expansion rewrites your document into a form with no context at all: every key
+          is a full IRI, every value is a tagged object, every shorthand is gone. If you
+          understand expansion you understand JSON-LD, and if you do not, nothing else
+          will make sense.
+        </p>
+
+        <p>Here is the document from chapter one, expanded:</p>
+
+<pre><code>[{
+  <span class="t-key">"https://schema.org/name"</span>: [
+    { <span class="t-key">"@value"</span>: <span class="t-str">"Ada Lovelace"</span> }
+  ]
+}]</code></pre>
+
+        <p>
+          Three things happened. The context vanished. The key became an IRI. And the
+          value became a one-element array containing an object with an
+          <code>@value</code>. Expansion is relentlessly uniform: everything is an array,
+          every literal is an object, nothing is abbreviated. It is deliberately ugly,
+          because it is a canonical form for machines to compare, not a format for people
+          to write.
+        </p>
+
+        <h3>The property that ruins everything</h3>
+
+        <p>
+          <strong>Expansion is total.</strong> It is defined to always succeed. There is
+          no input for which the expansion algorithm raises "I do not know this key". A
+          key the context does not define, and which is not itself an IRI, expands to
+          nothing — and a key that expands to nothing is <em>removed</em>, silently, along
+          with its value and everything nested below it.
+        </p>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: { <span class="t-key">"name"</span>: <span class="t-str">"https://schema.org/name"</span> },
+  <span class="t-key">"name"</span>: <span class="t-str">"Ada Lovelace"</span>,
+  <span class="t-key">"emial"</span>: <span class="t-str">"ada@example.org"</span>,
+  <span class="t-key">"address"</span>: { <span class="t-key">"city"</span>: <span class="t-str">"London"</span>, <span class="t-key">"country"</span>: <span class="t-str">"GB"</span> }
+}</code></pre>
+
+        <p>Expanded:</p>
+
+<pre><code>[{
+  <span class="t-key">"https://schema.org/name"</span>: [ { <span class="t-key">"@value"</span>: <span class="t-str">"Ada Lovelace"</span> } ]
+}]</code></pre>
+
+        <p>
+          The typo is gone. The entire address is gone — not because it was invalid, but
+          because <code>address</code> is undefined, so the key expanded to nothing, and
+          the object beneath it went with the key. Two thirds of the document evaporated
+          and the processor returned success. No warning. Exit code zero.
+        </p>
+
+        <p class="margin-note">
+          This is the single behaviour that motivates every tool in this project.
+          <code>L2.key-dropped</code> is the rule id, and it points at the line in your
+          document where the loss happened.
+        </p>
+
+        <div class="callout">
+          <img src="../assets/img/herb.svg" alt="">
+          <p>
+            <strong>Why is it defined this way?</strong>
+            Because JSON-LD was designed so that any JSON document can be given a context
+            and become linked data, with the parts nobody has modelled yet just sitting
+            there harmlessly. That is a real virtue for incremental adoption. It is also
+            why a production pipeline needs something watching the drop count.
+          </p>
+        </div>
+
+        <h3>What survives without a context</h3>
+
+        <p>Three kinds of key survive expansion whatever the context says:</p>
+
+        <ul>
+          <li>A <strong>keyword</strong> — <code>@id</code>, <code>@type</code>,
+            <code>@value</code> and the rest. They are part of the language.</li>
+          <li>An <strong>absolute IRI</strong> — a key that is already
+            <code>https://schema.org/name</code> needs no definition.</li>
+          <li>A <strong>compact IRI</strong> — <code>schema:name</code>, when
+            <code>schema</code> is defined as a prefix. This is the one people
+            overestimate: it requires the prefix to be defined, and an undefined prefix
+            makes the key drop like any other.</li>
+        </ul>
+
+        <p>
+          There is a fourth, conditional case: if the context sets <code>@vocab</code>,
+          every otherwise-unmatched key is resolved against it. That turns silent loss
+          into silent invention, which is a different problem — chapter seven.
+        </p>
+      </section>
+
+      <!-- ------------------------------------------------------------ 3 -- -->
+      <section class="chapter" id="terms">
+        <p class="chapter__num">Chapter three</p>
+        <h2>The term definition</h2>
+
+        <p class="lede">
+          A term is an entry in the context. In its short form it is a string; in its long
+          form it is an object, and the object is where all the power is. Learning
+          JSON-LD is largely learning what may go in that object and what each entry
+          changes.
+        </p>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: {
+    <span class="t-com">// short form: just the IRI</span>
+    <span class="t-key">"name"</span>: <span class="t-str">"https://schema.org/name"</span>,
+
+    <span class="t-com">// long form: the IRI plus everything else</span>
+    <span class="t-key">"author"</span>: {
+      <span class="t-key">"@id"</span>:        <span class="t-str">"https://schema.org/author"</span>,
+      <span class="t-key">"@type"</span>:      <span class="t-str">"@id"</span>,
+      <span class="t-key">"@container"</span>: <span class="t-str">"@set"</span>
+    }
+  }
+}</code></pre>
+
+        <p>The entries that matter, and what each one governs:</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Entry</th><th>Governs</th><th>Chapter</th></tr></thead>
+            <tbody>
+              <tr><td><code>@id</code></td><td>Which IRI the key means</td><td>this one</td></tr>
+              <tr><td><code>@type</code></td><td>How the <em>value</em> is interpreted</td><td>four</td></tr>
+              <tr><td><code>@container</code></td><td>The JSON shape the value takes</td><td>five</td></tr>
+              <tr><td><code>@context</code></td><td>A context that applies below this key</td><td>six</td></tr>
+              <tr><td><code>@language</code></td><td>Default language tag for string values</td><td>five</td></tr>
+              <tr><td><code>@direction</code></td><td>Base text direction for strings</td><td>five</td></tr>
+              <tr><td><code>@reverse</code></td><td>The edge points the other way</td><td>eight</td></tr>
+              <tr><td><code>@nest</code></td><td>Group keys in JSON without meaning anything</td><td>six</td></tr>
+              <tr><td><code>@prefix</code></td><td>Whether this term may be used as a prefix</td><td>seven</td></tr>
+              <tr><td><code>@protected</code></td><td>Downstream contexts may not redefine it</td><td>seven</td></tr>
+              <tr><td><code>@index</code></td><td>A property that carries the index of an index map</td><td>five</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>The key is not the term, and neither is the IRI</h3>
+
+        <p>
+          This is the distinction that most often goes wrong in a long-lived vocabulary.
+          A term has a JSON key and an IRI, and they change independently with completely
+          different consequences:
+        </p>
+
+        <ul>
+          <li>
+            <strong>Change the key</strong> and every document already written breaks —
+            they use the old key, it is now undefined, and it drops. But the RDF is
+            unchanged: nothing you said about the world became false.
+          </li>
+          <li>
+            <strong>Change the IRI</strong> and every document keeps parsing exactly as it
+            did. But every statement now means something different, and anything that
+            joined on the old IRI silently stops joining.
+          </li>
+        </ul>
+
+        <p>
+          One is a breaking change to your consumers' code. The other is a breaking change
+          to their data. They are not the same review, and a diff tool that reports only
+          "the context changed" has told you nothing.
+        </p>
+
+        <div class="callout callout--tool">
+          <img src="../assets/img/codex.svg" alt="">
+          <p>
+            <strong>Which is why this tool gives every term a stable element id.</strong>
+            The key and the IRI are both mutable attributes of it. A rename is then
+            detected rather than inferred from string similarity, and
+            <code>ldm diff</code> can say <em>renamed</em> where a textual diff can only
+            say <em>one removed, one added</em>.
+          </p>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ 4 -- -->
+      <section class="chapter" id="coercion">
+        <p class="chapter__num">Chapter four</p>
+        <h2>Coercion: <code>@type</code> in a term definition</h2>
+
+        <p class="lede">
+          JSON has four value types and RDF has thousands. <code>@type</code> in a term
+          definition bridges the gap: it tells the processor how to read the value it
+          finds, and getting it wrong produces the second most expensive bug in JSON-LD
+          after the dropped key.
+        </p>
+
+        <h3><code>"@type": "@id"</code> — the value is a reference</h3>
+
+        <p>Consider two contexts that differ by one line, and one document:</p>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: { <span class="t-key">"author"</span>: <span class="t-str">"https://schema.org/author"</span> },
+  <span class="t-key">"author"</span>: <span class="t-str">"https://example.org/people/ada"</span>
+}
+
+<span class="t-com">// expands to a string literal that happens to look like a URL:</span>
+[{ <span class="t-key">"https://schema.org/author"</span>: [
+     { <span class="t-key">"@value"</span>: <span class="t-str">"https://example.org/people/ada"</span> } ] }]</code></pre>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: { <span class="t-key">"author"</span>: {
+      <span class="t-key">"@id"</span>: <span class="t-str">"https://schema.org/author"</span>, <span class="t-key">"@type"</span>: <span class="t-str">"@id"</span> } },
+  <span class="t-key">"author"</span>: <span class="t-str">"https://example.org/people/ada"</span>
+}
+
+<span class="t-com">// expands to an actual edge in the graph:</span>
+[{ <span class="t-key">"https://schema.org/author"</span>: [
+     { <span class="t-key">"@id"</span>: <span class="t-str">"https://example.org/people/ada"</span> } ] }]</code></pre>
+
+        <p>
+          The documents are byte-identical. In the first, the graph has a node with a
+          string attached. In the second, the graph has two nodes and an edge between
+          them. Every traversal, every join, every SPARQL query that follows
+          <code>schema:author</code> works in one case and returns nothing in the other.
+        </p>
+
+        <p class="margin-note">
+          <code>L2.coercion-did-not-fire</code>: a value that parses as an absolute IRI,
+          under a term with no <code>@type: @id</code>. It is a heuristic, deliberately —
+          sometimes a URL really is a string. It is reported, not refused.
+        </p>
+
+        <h3>Datatypes</h3>
+
+        <p>
+          <code>@type</code> can also be a datatype IRI, which tags the literal. This is
+          how you say a string is really a date:
+        </p>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: {
+    <span class="t-key">"born"</span>: { <span class="t-key">"@id"</span>: <span class="t-str">"https://schema.org/birthDate"</span>,
+              <span class="t-key">"@type"</span>: <span class="t-str">"http://www.w3.org/2001/XMLSchema#date"</span> }
+  },
+  <span class="t-key">"born"</span>: <span class="t-str">"1815-12-10"</span>
+}</code></pre>
+
+        <p>
+          Without the coercion, <code>"1815-12-10"</code> is a string, and a consumer
+          sorting by date is sorting lexically — which happens to work for ISO dates and
+          fails the moment someone writes <code>10 December 1815</code>. The datatype is
+          the contract that makes the sort meaningful.
+        </p>
+
+        <h3><code>"@type": "@vocab"</code> — the value is a term</h3>
+
+        <p>
+          The rarer third form. It resolves the value against <code>@vocab</code> rather
+          than as a plain IRI, which is how you get enum-like values that are really IRIs:
+        </p>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: {
+    <span class="t-key">"@vocab"</span>: <span class="t-str">"https://schema.org/"</span>,
+    <span class="t-key">"status"</span>: { <span class="t-key">"@id"</span>: <span class="t-str">"https://schema.org/eventStatus"</span>,
+                <span class="t-key">"@type"</span>: <span class="t-str">"@vocab"</span> }
+  },
+  <span class="t-key">"status"</span>: <span class="t-str">"EventCancelled"</span>   <span class="t-com">// → https://schema.org/EventCancelled</span>
+}</code></pre>
+
+        <p>
+          The writer types a short word. The graph gets a global identifier. This is the
+          best available answer to "how do I model an enumeration" in JSON-LD, and it is
+          badly underused.
+        </p>
+      </section>
+
+      <!-- ------------------------------------------------------------ 5 -- -->
+      <section class="chapter" id="containers">
+        <p class="chapter__num">Chapter five</p>
+        <h2>Containers</h2>
+
+        <p class="lede">
+          <code>@container</code> is the part of JSON-LD that changes the JSON and — in
+          most cases — changes no triple at all. It exists entirely for the convenience of
+          the developer writing and reading the document. That makes it the hardest
+          feature to reason about, because you cannot check your work by looking at the
+          graph.
+        </p>
+
+        <h3><code>@set</code> — always an array</h3>
+
+        <p>
+          The most useful and least interesting. It says: whatever the document writes,
+          treat it as a list of values, and when compacting, always produce an array —
+          even for one element.
+        </p>
+
+        <p>
+          This is the closest thing JSON-LD has to future-proofing. A property that is
+          single-valued today and multi-valued in two years does not change the shape of
+          every document that already exists, and does not break every consumer who wrote
+          <code>doc.tags.map(...)</code> against the old one. If you are unsure, use
+          <code>@set</code>. It costs nothing and it is not a semantic statement.
+        </p>
+
+        <h3><code>@list</code> — order is meaningful</h3>
+
+        <p>
+          RDF has no inherent order; a set of triples is a set. <code>@list</code> buys you
+          order by encoding a linked list into the graph, which is expensive and awkward
+          to query, and is correct exactly when the order is part of what you are saying.
+          The authors of a paper are a list. A person's email addresses are not.
+        </p>
+
+<pre><code>{ <span class="t-key">"@context"</span>: { <span class="t-key">"authors"</span>: {
+      <span class="t-key">"@id"</span>: <span class="t-str">"https://schema.org/author"</span>,
+      <span class="t-key">"@container"</span>: <span class="t-str">"@list"</span>, <span class="t-key">"@type"</span>: <span class="t-str">"@id"</span> } },
+  <span class="t-key">"authors"</span>: [ <span class="t-str">"ex:ada"</span>, <span class="t-str">"ex:charles"</span> ] }</code></pre>
+
+        <h3>The maps: <code>@index</code>, <code>@language</code>, <code>@id</code>, <code>@type</code></h3>
+
+        <p>
+          Four containers turn an array into an object, so the document can be indexed by
+          something instead of scanned. They differ in whether the key survives expansion.
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Container</th><th>The object's key is</th><th>In the graph?</th></tr></thead>
+            <tbody>
+              <tr><td><code>@language</code></td><td>a language tag</td><td><strong>Yes</strong> — it becomes the literal's language</td></tr>
+              <tr><td><code>@id</code></td><td>the node's IRI</td><td><strong>Yes</strong> — it becomes <code>@id</code></td></tr>
+              <tr><td><code>@type</code></td><td>the node's type IRI</td><td><strong>Yes</strong> — it becomes <code>@type</code></td></tr>
+              <tr><td><code>@index</code></td><td>anything you like</td><td><strong>No</strong> — it is discarded</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+<pre><code><span class="t-com">// @language: the key is data</span>
+{ <span class="t-key">"@context"</span>: { <span class="t-key">"label"</span>: {
+      <span class="t-key">"@id"</span>: <span class="t-str">"https://schema.org/name"</span>,
+      <span class="t-key">"@container"</span>: <span class="t-str">"@language"</span> } },
+  <span class="t-key">"label"</span>: { <span class="t-key">"en"</span>: <span class="t-str">"Mortar"</span>, <span class="t-key">"la"</span>: <span class="t-str">"Mortarium"</span> } }
+
+<span class="t-com">// expands to two literals, each carrying its language:</span>
+[{ <span class="t-key">"https://schema.org/name"</span>: [
+     { <span class="t-key">"@value"</span>: <span class="t-str">"Mortar"</span>,    <span class="t-key">"@language"</span>: <span class="t-str">"en"</span> },
+     { <span class="t-key">"@value"</span>: <span class="t-str">"Mortarium"</span>, <span class="t-key">"@language"</span>: <span class="t-str">"la"</span> } ] }]</code></pre>
+
+        <div class="callout callout--warn">
+          <img src="../assets/img/jar.svg" alt="">
+          <p>
+            <strong><code>@index</code> is a hole in the bottom of the jar.</strong>
+            The index key is thrown away by expansion. It is genuinely useful — it lets a
+            document be organised for the code that reads it — but anything you put there
+            is invisible to every RDF consumer. Put a sort order there; do not put the
+            only copy of a fact there.
+          </p>
+        </div>
+
+        <p>
+          JSON-LD 1.1 also allows pairs: <code>["@graph", "@id"]</code>,
+          <code>["@index", "@set"]</code> and so on. They compose the way you would hope,
+          and they are where processor bugs live — this project's expansion code was
+          wrong about <code>["@graph", "@index"]</code> until the W3C test suite said so.
+        </p>
+      </section>
+
+      <!-- ------------------------------------------------------------ 6 -- -->
+      <section class="chapter" id="scoped">
+        <p class="chapter__num">Chapter six</p>
+        <h2>Scoped contexts and position</h2>
+
+        <p class="lede">
+          Up to here, the context has been one thing that applies to the whole document.
+          JSON-LD 1.1 broke that assumption in the most useful and most confusing way
+          available: a context can be attached to a term, and then it applies only below
+          that term.
+        </p>
+
+        <h3>Property-scoped contexts</h3>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: {
+    <span class="t-key">"name"</span>:    <span class="t-str">"https://schema.org/name"</span>,
+    <span class="t-key">"address"</span>: {
+      <span class="t-key">"@id"</span>: <span class="t-str">"https://schema.org/address"</span>,
+      <span class="t-key">"@context"</span>: {
+        <span class="t-key">"name"</span>: <span class="t-str">"https://schema.org/streetAddress"</span>
+      }
+    }
+  },
+  <span class="t-key">"name"</span>: <span class="t-str">"Ada Lovelace"</span>,
+  <span class="t-key">"address"</span>: { <span class="t-key">"name"</span>: <span class="t-str">"12 St James's Square"</span> }
+}</code></pre>
+
+        <p>
+          Two keys spelled <code>name</code>, in one document, meaning two different
+          properties. This is the right answer to a real problem — nested objects
+          genuinely want their own vocabulary, and forcing globally unique key names
+          across a large document produces
+          <code>addressStreetAddressLine1</code>. But note what it costs: <strong>you can
+          no longer tell what a key means by looking at the context.</strong> You have to
+          know where in the document the key appears.
+        </p>
+
+        <p class="margin-note">
+          Which is why the canvas draws a scoped context as a <em>region</em> containing
+          the terms it affects, rather than as an annotation on the term that declares it.
+          Its effect is positional, so the picture should be positional.
+        </p>
+
+        <h3>Type-scoped contexts</h3>
+
+        <p>
+          The same idea keyed on <code>@type</code> rather than on the property. A context
+          attached to a type definition applies to any node object declaring that type.
+          Unlike property-scoped contexts, type-scoped contexts do not propagate into
+          nested nodes by default — they apply to the node bearing the type and stop
+          there, unless <code>"@propagate": true</code> says otherwise.
+        </p>
+
+        <p>
+          Nobody remembers this rule. Write a test for it.
+        </p>
+
+        <h3><code>@nest</code> — grouping with no meaning</h3>
+
+        <p>
+          <code>@nest</code> lets a document group keys under a JSON object that has no
+          semantic existence at all. It is there to make a document readable when a flat
+          node object would have thirty keys.
+        </p>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: {
+    <span class="t-key">"details"</span>: <span class="t-str">"@nest"</span>,
+    <span class="t-key">"name"</span>:  <span class="t-str">"https://schema.org/name"</span>,
+    <span class="t-key">"born"</span>:  { <span class="t-key">"@id"</span>: <span class="t-str">"https://schema.org/birthDate"</span>,
+                <span class="t-key">"@nest"</span>: <span class="t-str">"details"</span> }
+  },
+  <span class="t-key">"name"</span>: <span class="t-str">"Ada Lovelace"</span>,
+  <span class="t-key">"details"</span>: { <span class="t-key">"born"</span>: <span class="t-str">"1815-12-10"</span> }
+}</code></pre>
+
+        <p>
+          On expansion, <code>details</code> disappears entirely and <code>born</code> is
+          a direct property of the node. The nesting is presentation. There is no
+          <code>details</code> node, no <code>details</code> edge, nothing.
+        </p>
+
+        <div class="callout callout--tool">
+          <img src="../assets/img/mark.svg" alt="">
+          <p>
+            <strong>This is the gap the two-pane canvas exists to show.</strong>
+            <code>@nest</code> is a box in the JSON pane and is <em>absent</em> in the
+            graph pane. <code>@container: @set</code> changes the JSON pane and leaves the
+            graph pane still. A scoped context is a region in both. Once you can see the
+            two pictures side by side, the 1.1 feature set stops being a list of tricks
+            and becomes two coherent halves.
+          </p>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------------ 7 -- -->
+      <section class="chapter" id="keywords">
+        <p class="chapter__num">Chapter seven</p>
+        <h2>Vocab, base, and protection</h2>
+
+        <p class="lede">
+          Three context-level keywords that change how everything else resolves. Each of
+          them is a convenience with a long tail, and each is worth an explicit decision
+          rather than a copied line.
+        </p>
+
+        <h3><code>@vocab</code></h3>
+
+        <p>
+          <code>@vocab</code> sets a fallback: any key not otherwise matched is appended to
+          it. <code>"@vocab": "https://schema.org/"</code> means <code>widget</code>
+          becomes <code>https://schema.org/widget</code>, whether or not schema.org has
+          ever heard of a widget.
+        </p>
+
+        <p>
+          So <code>@vocab</code> converts <em>silent loss</em> into <em>silent
+          invention</em>. Which of those you prefer depends entirely on your situation.
+          For an internal vocabulary you control, where the base is your own namespace,
+          <code>@vocab</code> is excellent: every key gets an IRI and typos become
+          obviously-wrong IRIs rather than nothing. For a document mapped onto someone
+          else's published vocabulary, it is dangerous: it will happily mint
+          <code>https://schema.org/emial</code> and that IRI will never join with
+          anything.
+        </p>
+
+        <div class="callout callout--warn">
+          <img src="../assets/img/alembic.svg" alt="">
+          <p>
+            <strong>Do not set <code>@vocab</code> to a namespace you do not own.</strong>
+            You are not extending their vocabulary. You are creating IRIs in their
+            namespace that they have not defined and will not resolve, and your data now
+            asserts things in a space you have no authority over.
+          </p>
+        </div>
+
+        <h3><code>@base</code></h3>
+
+        <p>
+          <code>@base</code> resolves relative IRIs in <code>@id</code> values — not keys.
+          <code>"@id": "people/ada"</code> against a base of
+          <code>https://example.org/</code> becomes
+          <code>https://example.org/people/ada</code>.
+        </p>
+
+        <p>
+          With no <code>@base</code> and no document URL, a relative <code>@id</code> stays
+          relative, and a relative IRI in RDF is not an identifier — it is a fragment
+          waiting for a context that may never come. Two consumers who dereferenced your
+          document from different URLs now disagree about what your node is called. Make
+          the base explicit, or make every <code>@id</code> absolute.
+        </p>
+
+        <h3><code>@protected</code></h3>
+
+        <p>
+          New in 1.1, and the closest JSON-LD comes to a contract. A protected term cannot
+          be redefined by a context layered on top of it — an attempt is an error rather
+          than an override.
+        </p>
+
+        <p>
+          This matters because contexts compose at runtime. A document can list several
+          contexts, and later ones win. Without protection, a document can include your
+          vocabulary and then quietly redefine <code>name</code> to mean something else,
+          and every statement it makes with your term is now a statement about something
+          you did not define. Protection is a promise to downstream consumers that a term
+          they resolved once will keep meaning that.
+        </p>
+
+        <p>
+          Protect the terms that are load-bearing for verification or for identity. It is
+          the same instinct as <code>final</code>: use it where you mean it, not
+          everywhere.
+        </p>
+      </section>
+
+      <!-- ------------------------------------------------------------ 8 -- -->
+      <section class="chapter" id="compaction">
+        <p class="chapter__num">Chapter eight</p>
+        <h2>Compaction, and the round trip that isn't</h2>
+
+        <p class="lede">
+          Compaction is expansion run backwards: given expanded JSON-LD and a context,
+          produce the shortest, most idiomatic document that expands back to the same
+          thing. It is what makes JSON-LD pleasant to read, and it is not the inverse of
+          expansion.
+        </p>
+
+        <p>
+          Expansion is lossy in one direction — it discards which of several possible
+          spellings you chose. Compaction has to pick one, and the algorithm for picking
+          is genuinely intricate: it builds an inverse index from the context, then for
+          each property selects the term whose container, type, and language best match
+          the value in hand, breaking ties by shortest-then-lexicographic order.
+        </p>
+
+        <p>So a document can round-trip and come back different:</p>
+
+<pre><code><span class="t-com">// you wrote</span>
+{ <span class="t-key">"@context"</span>: {...}, <span class="t-key">"tags"</span>: <span class="t-str">"apothecary"</span> }
+
+<span class="t-com">// expand then compact, with "tags" having @container: @set</span>
+{ <span class="t-key">"@context"</span>: {...}, <span class="t-key">"tags"</span>: [ <span class="t-str">"apothecary"</span> ] }</code></pre>
+
+        <p>
+          Same graph. Different bytes. This is correct behaviour and it catches people who
+          expected canonical JSON out of a canonicalisation step. If you need stable bytes
+          — for a signature, for a checksum, for a diff — you need
+          <a href="https://www.rfc-editor.org/rfc/rfc8785">canonicalization</a> proper
+          (URDNA2015 over the N-Quads), not a compaction round trip.
+        </p>
+
+        <h3><code>@reverse</code></h3>
+
+        <p>
+          One last feature, best introduced here because it is most visible in compaction.
+          <code>@reverse</code> lets a document state an edge from the object's side:
+        </p>
+
+<pre><code>{ <span class="t-key">"@context"</span>: { <span class="t-key">"wrote"</span>: {
+      <span class="t-key">"@reverse"</span>: <span class="t-str">"https://schema.org/author"</span>,
+      <span class="t-key">"@type"</span>: <span class="t-str">"@id"</span> } },
+  <span class="t-key">"@id"</span>: <span class="t-str">"https://example.org/people/ada"</span>,
+  <span class="t-key">"wrote"</span>: <span class="t-str">"https://example.org/notes/g"</span> }</code></pre>
+
+        <p>
+          The triple produced has the <em>note</em> as its subject and Ada as its object.
+          The document reads as though Ada is the subject throughout, which is often how a
+          person wants to write it. In the graph pane, the arrow points the other way from
+          where the JSON pane suggests — which is exactly the sort of thing worth drawing
+          rather than describing.
+        </p>
+      </section>
+
+      <!-- ------------------------------------------------------------ 9 -- -->
+      <section class="chapter" id="publishing">
+        <p class="chapter__num">Chapter nine</p>
+        <h2>Publishing a context</h2>
+
+        <p class="lede">
+          The last chapter is the one that is not about the specification. You have a
+          context that works. You put it at a URL. From that moment it is infrastructure,
+          and the rules that govern infrastructure are not the rules that governed the
+          file on your laptop.
+        </p>
+
+        <h3>A published context URL is a promise</h3>
+
+        <p>
+          Documents in the wild reference your context by URL, and resolve it at read time,
+          possibly years from now, possibly in a verification step where a change in
+          meaning is a security event. What you serve at that URL is not a file you own
+          any more. It is an interface.
+        </p>
+
+        <p>
+          The consequence is unpopular and simple: <strong>a published context should never
+          change in place.</strong> Publish a new URL and leave the old one serving what it
+          always served. Every scheme that works — DID method contexts, the W3C credential
+          contexts, schema.org's versioned releases — is this scheme.
+        </p>
+
+        <h3>Immutability, mechanically</h3>
+
+        <p>
+          "Never change it" is a policy, and policies decay. The mechanical version is to
+          make the identity of a version <em>derive from its content</em>, so that changing
+          it produces a different version rather than a changed one. That is what this tool
+          does: a version is content-addressed, it holds the model as written, the
+          lockfile, the examples and the emitted artifacts, and a manifest checksums every
+          file and then checksums itself. The store refuses every write into a version that
+          exists.
+        </p>
+
+        <p>
+          Humans still need names. So names are a separate, mutable layer: <code>stable</code>
+          is a label that points at a version, and moving it leaves every published byte
+          untouched. There is no command to rename a version, because a version's name is
+          its content hash and there is nothing there to rename.
+        </p>
+
+        <h3>Know what kind of change you are making</h3>
+
+        <p>
+          Before you publish the next version, the useful question is not <em>what
+          changed</em> but <em>what kind of change was it</em>:
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Class</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><code>additive</code></td><td>New terms. Existing documents unaffected.</td></tr>
+              <tr><td><code>compatible</code></td><td>Changed, but every existing document still expands the same.</td></tr>
+              <tr><td><code>breaking</code></td><td>Existing documents expand differently or lose content.</td></tr>
+              <tr><td><code>semantic</code></td><td>Documents parse identically and now mean something else.</td></tr>
+              <tr><td><code>illegal</code></td><td>Violates a promise already made — redefining a protected term.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>
+          <code>semantic</code> is the row that justifies the whole table. It is invisible
+          to every test you have, because every test still passes. An ambiguous change is
+          classified <code>breaking</code>, on the principle that the cost of an
+          unnecessary major version is an afternoon and the cost of a missed one is a
+          year.
+        </p>
+
+        <div class="callout">
+          <img src="../assets/img/jar.svg" alt="">
+          <p>
+            <strong>And vendor what you reference.</strong>
+            If your context references someone else's, your build depends on their server
+            and their editorial decisions. Fetch it once, commit it, record its hash, and
+            read only the committed copy. Then a change on their side is a diff in your
+            pull request instead of a Tuesday outage.
+          </p>
+        </div>
+
+        <p>
+          That is the book. The specification has more in it — framing, flattening,
+          conversion to and from RDF datasets, the HTML embedding — but none of it will
+          confuse you the way the nine chapters above will, and all of it rests on
+          expansion.
+        </p>
+      </section>
+
+      <div class="pager">
+        <a href="../">← The tool</a>
+        <a href="../blog/">Notes from the shop →</a>
+      </div>
+
+      <img class="fleuron" src="../assets/img/fleuron.svg" alt="">
+
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <div>
+      <h2>Read</h2>
+      <ul>
+        <li><a href="./">The JSON-LD handbook</a></li>
+        <li><a href="../blog/linked-data.html">What linked data is for</a></li>
+        <li><a href="../blog/verifiable-credentials.html">Credentials and the context you sign</a></li>
+        <li><a href="../blog/graphs.html">Graphs, and the two pictures</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Reference</h2>
+      <ul>
+        <li><a href="https://www.w3.org/TR/json-ld11/">JSON-LD 1.1</a></li>
+        <li><a href="https://www.w3.org/TR/json-ld11-api/">Processing algorithms</a></li>
+        <li><a href="https://github.com/Volland/dr-json-ld">Source on GitHub</a></li>
+      </ul>
+    </div>
+    <p class="footer__note">
+      Dr. JSON-LD is MIT licensed. A checksum detects accident and casual tampering; it
+      is not a signature, and nothing here implies otherwise.
+    </p>
+  </div>
+  <div class="footer__legal">
+    <span>&copy; 2026 Wolodymyr Pawlyshyn</span>
+    <a href="../impressum.html">Impressum</a>
+    <a href="../datenschutz.html">Datenschutz</a>
+    <a href="../agb.html">AGB</a>
+  </div>
+</footer>
+
+</body>
+</html>

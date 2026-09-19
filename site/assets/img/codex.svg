@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Open book">
+  <g fill="none" stroke="#7a5230" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M32 18 C26 13 16 12 8 14 v34 c8 -2 18 -1 24 4 6 -5 16 -6 24 -4 V14 c-8 -2 -18 -1 -24 4 Z" fill="#fffbf4"/>
+    <path d="M32 18 v34" stroke="#c2551d"/>
+  </g>
+  <g stroke="#c2551d" stroke-width="2" stroke-linecap="round" opacity="0.85">
+    <path d="M14 24 h12"/><path d="M14 31 h12"/><path d="M14 38 h8"/>
+    <path d="M38 24 h12"/><path d="M38 31 h12"/><path d="M38 38 h8"/>
+  </g>
+</svg>

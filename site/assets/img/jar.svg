@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 96" width="64" height="96" role="img" aria-label="Apothecary jar">
+  <g fill="none" stroke="#7a5230" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M18 14 h28 l-3 8 H21 Z" fill="#fae3d1"/>
+    <path d="M21 22 c0 6 -5 8 -5 16 v34 c0 8 5 10 5 16 h22 c0-6 5-8 5-16 V38 c0-8 -5-10 -5-16" fill="#fffbf4"/>
+    <path d="M16 46 h32" />
+    <path d="M16 68 h32" />
+  </g>
+  <rect x="19" y="49" width="26" height="16" rx="2" fill="#fae3d1" stroke="#c2551d" stroke-width="2"/>
+  <g stroke="#1b4f8c" stroke-width="2" fill="#1b4f8c">
+    <line x1="24" y1="61" x2="24" y2="53" stroke-linecap="round"/>
+    <line x1="24" y1="61" x2="32" y2="61" stroke-linecap="round"/>
+    <circle cx="24" cy="53" r="2.5"/><circle cx="24" cy="61" r="2.5"/><circle cx="32" cy="61" r="2.5"/>
+    <circle cx="38" cy="57" r="2.5"/>
+    <line x1="32" y1="61" x2="38" y2="57" stroke-linecap="round"/>
+  </g>
+</svg>

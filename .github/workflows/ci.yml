@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      # `lat.md/processing#Processing#Context Resolution#Offline by default`:
+      # every command except `ldm vendor` runs with no network. The test job
+      # proves it rather than asserting it — outbound traffic is dropped, so a
+      # test that reaches for the network fails here instead of passing quietly.
+      - name: Disable outbound network
+        run: |
+          sudo iptables -P OUTPUT DROP
+          sudo iptables -A OUTPUT -o lo -j ACCEPT
+      - run: npm run test
+        env:
+          LDM_NETWORK_DISABLED: '1'
+
+  fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      # The vendored contexts must match the hashes the models record. This is
+      # the continuous-integration form of `ldm vendor`, and it fetches nothing.
+      - name: Verify vendored contexts
+        run: |
+          for model in packages/core/test/fixtures/models/*.jsonld.yaml; do
+            node packages/cli/dist/bin.js vendor "$model" --check
+          done
+
+      # Every fixture model resolves, emits both targets, and every example
+      # meets its declared outcome — with the network off.
+      - name: Disable outbound network
+        run: |
+          sudo iptables -P OUTPUT DROP
+          sudo iptables -A OUTPUT -o lo -j ACCEPT
+      - name: Check every fixture model
+        run: |
+          for model in packages/core/test/fixtures/models/*.jsonld.yaml; do
+            node packages/cli/dist/bin.js check "$model"
+            node packages/cli/dist/bin.js emit "$model" --target context --out /tmp/emit
+            node packages/cli/dist/bin.js emit "$model" --target context-inline --out /tmp/emit
+          done
+
+      # The emitted context must be regenerable: a hand edit to a generated
+      # artifact is caught in review rather than in production.
+      - run: npx vitest run packages/core/test/fixtures.test.ts
+
+      # Every fixture project checks, every version verifies, and republishing
+      # is a no-op — so the committed tree is exactly what publishing produces.
+      - name: Check every fixture project
+        run: |
+          for project in packages/core/test/fixtures/projects/*/ldm.project.yaml; do
+            dir=$(dirname "$project")
+            ( cd "$dir" && node "$GITHUB_WORKSPACE/packages/cli/dist/bin.js" check )
+          done
+      - run: npx vitest run packages/core/test/versioned-project.test.ts
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm i -g lat.md
+      - run: lat check

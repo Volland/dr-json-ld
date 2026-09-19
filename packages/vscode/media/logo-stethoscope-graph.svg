@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128"
+     role="img" aria-labelledby="stgTitle stgDesc">
+  <title id="stgTitle">JSON-LD Modeler</title>
+  <desc id="stgDesc">A stethoscope drawn as a node-link graph, its chest piece lettered L D.</desc>
+
+  <defs>
+    <linearGradient id="stgTile" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#2A7DEE"/>
+      <stop offset="1" stop-color="#0B3D8F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="28" fill="url(#stgTile)"/>
+
+  <!-- The tubing is the graph's edges; every joint is a vertex. -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round">
+    <path d="M38 36 C38 60 64 58 64 72"/>
+    <path d="M90 36 C90 60 64 58 64 72"/>
+  </g>
+
+  <g fill="#FFFFFF">
+    <circle cx="38" cy="32" r="9"/>
+    <circle cx="90" cy="32" r="9"/>
+    <circle cx="64" cy="72" r="7"/>
+  </g>
+
+  <!-- The chest piece is the largest node, and it carries the monogram. -->
+  <circle cx="64" cy="93" r="19" fill="#FFFFFF"/>
+  <circle cx="64" cy="93" r="13" fill="#0B3D8F"/>
+
+  <!-- Letters are drawn, never set: an outlined mark cannot shift with a font. -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M56 86 V100 H62"/>
+    <path d="M67 86 V100"/>
+    <path d="M67 86 C75 86 75 100 67 100"/>
+  </g>
+</svg>

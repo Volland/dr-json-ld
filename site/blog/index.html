@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes from the shop — Dr. JSON-LD</title>
+<meta name="description" content="Essays on linked data, verifiable credentials, and graphs — from the workshop behind the JSON-LD Modeler.">
+<link rel="icon" href="../assets/img/mark.svg">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="brand" href="../">
+      <img src="../assets/img/mark.svg" alt="">
+      <span>Dr. JSON-LD<small>apothecary for linked data</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="../">The tool</a>
+      <a href="../book/">Handbook</a>
+      <a href="./" aria-current="page">Notes</a>
+      <a href="https://github.com/Volland/dr-json-ld">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="hero">
+    <div>
+      <p class="eyebrow">Three essays</p>
+      <h1>Notes from the <em>shop</em></h1>
+      <p class="hero__lede">
+        Longer arguments that did not fit in the handbook. What linked data is actually
+        for, why a credential is a promise about a context, and why a graph needs two
+        pictures rather than one.
+      </p>
+    </div>
+    <img class="hero__art" src="../assets/img/herb.svg" alt="A sprig of herbs whose leaves are the nodes of a graph">
+  </div>
+
+  <div class="wrap" style="padding-bottom:3rem">
+    <ul class="post-list">
+      <li>
+        <article>
+          <p class="post-meta"><span>2026-08-11</span><span>12 min</span><span>Linked data</span></p>
+          <h3><a href="linked-data.html">What linked data is for, and what it costs</a></h3>
+          <p>
+            Two decades of semantic web promises have produced a lot of scepticism and
+            some genuinely load-bearing infrastructure. The useful question is not whether
+            linked data won, but which of its bets pay off at your scale — and the answer
+            turns on one thing: whether your identifiers have to survive leaving your
+            database.
+          </p>
+        </article>
+      </li>
+      <li>
+        <article>
+          <p class="post-meta"><span>2026-08-26</span><span>14 min</span><span>Credentials</span></p>
+          <h3><a href="verifiable-credentials.html">The context you sign</a></h3>
+          <p>
+            A verifiable credential is a signed JSON-LD document, which means the
+            signature covers the graph, not the bytes — and the graph is produced by
+            resolving a <code>@context</code> at some URL, later, on someone else's
+            machine. Everything difficult about VCs follows from that sentence.
+          </p>
+        </article>
+      </li>
+      <li>
+        <article>
+          <p class="post-meta"><span>2026-09-09</span><span>11 min</span><span>Modelling</span></p>
+          <h3><a href="graphs.html">Two pictures of the same graph</a></h3>
+          <p>
+            Every JSON-LD document is simultaneously a tree a developer types and a graph
+            a machine reasons over. Most tools show you one. The gap between them is where
+            <code>@container</code>, <code>@nest</code> and scoped contexts live — which
+            is to say, where the bugs live.
+          </p>
+        </article>
+      </li>
+    </ul>
+  </div>
+
+  <div class="wrap">
+    <div class="shelf" aria-hidden="true">
+      <img src="../assets/img/jar.svg" alt="">
+      <img src="../assets/img/mortar.svg" alt="">
+      <img src="../assets/img/codex.svg" alt="">
+      <img src="../assets/img/alembic.svg" alt="">
+    </div>
+  </div>
+
+  <img class="fleuron" src="../assets/img/fleuron.svg" alt="">
+
+</main>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <div>
+      <h2>Read</h2>
+      <ul>
+        <li><a href="../book/">The JSON-LD handbook</a></li>
+        <li><a href="linked-data.html">What linked data is for</a></li>
+        <li><a href="verifiable-credentials.html">The context you sign</a></li>
+        <li><a href="graphs.html">Two pictures of the same graph</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Build</h2>
+      <ul>
+        <li><a href="https://github.com/Volland/dr-json-ld">Source on GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/ldm">ldm on npm</a></li>
+        <li><a href="https://github.com/Volland/dr-json-ld/issues">Issues</a></li>
+      </ul>
+    </div>
+    <p class="footer__note">
+      Dr. JSON-LD is MIT licensed. A checksum detects accident and casual tampering; it
+      is not a signature, and nothing here implies otherwise.
+    </p>
+  </div>
+  <div class="footer__legal">
+    <span>&copy; 2026 Wolodymyr Pawlyshyn</span>
+    <a href="../impressum.html">Impressum</a>
+    <a href="../datenschutz.html">Datenschutz</a>
+    <a href="../agb.html">AGB</a>
+  </div>
+</footer>
+
+</body>
+</html>

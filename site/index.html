@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dr. JSON-LD — a workshop for @context</title>
+<meta name="description" content="Author a JSON-LD @context as a reviewable YAML model, see it as two coordinated diagrams, and find out what your documents are silently losing.">
+<link rel="icon" href="assets/img/mark.svg">
+<link rel="stylesheet" href="assets/fonts.css">
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="brand" href="./">
+      <img src="assets/img/mark.svg" alt="">
+      <span>Dr. JSON-LD<small>apothecary for linked data</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="./" aria-current="page">The tool</a>
+      <a href="book/">Handbook</a>
+      <a href="blog/">Notes</a>
+      <a href="https://github.com/Volland/dr-json-ld">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="hero">
+    <div>
+      <p class="eyebrow">A model, two diagrams, and a diagnosis</p>
+      <h1>Your <code>@context</code> is <em>losing</em> your data, and nothing is reporting it.</h1>
+      <p class="hero__lede">
+        JSON-LD expansion is total. It does not fail on a key it cannot resolve — it
+        drops it. A document can lose most of its content while every processor
+        involved reports success. This is a workshop built to make that visible.
+      </p>
+      <div class="actions">
+        <a class="btn btn--primary" href="#start">Get started</a>
+        <a class="btn btn--ghost" href="book/">Read the handbook</a>
+      </div>
+    </div>
+    <img class="hero__art" src="assets/img/alembic.svg" alt="An alembic over a flame, with particles of a graph suspended inside it">
+  </div>
+
+  <div class="wrap">
+    <div class="shelf" aria-hidden="true">
+      <img src="assets/img/jar.svg" alt="">
+      <img src="assets/img/mortar.svg" alt="">
+      <img src="assets/img/herb.svg" alt="">
+      <img src="assets/img/codex.svg" alt="">
+      <img src="assets/img/alembic.svg" alt="">
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="wrap">
+      <h2>The complaint</h2>
+      <p class="section__sub">
+        Three symptoms bring people here. They all have the same cause: a
+        <code>@context</code> is not a schema, and nothing in the stack treats it like one.
+      </p>
+
+      <div class="grid">
+        <div class="card">
+          <img class="card__icon" src="assets/img/jar.svg" alt="">
+          <h3>Silent loss</h3>
+          <p>
+            A key is misspelled, a prefix is undeclared, a term was never defined.
+            Expansion succeeds. The triple is simply not there, and the only way you
+            find out is when a consumer asks where the field went.
+          </p>
+        </div>
+        <div class="card">
+          <img class="card__icon" src="assets/img/mortar.svg" alt="">
+          <h3>Coercion that did not fire</h3>
+          <p>
+            <code>"author": "https://example.org/ada"</code> looks like a reference and
+            reads like one. Without <code>@type: @id</code> it is a string. Your graph has
+            a literal where you drew an edge.
+          </p>
+        </div>
+        <div class="card">
+          <img class="card__icon" src="assets/img/herb.svg" alt="">
+          <h3>Two pictures, one file</h3>
+          <p>
+            <code>@container</code> restructures the JSON and changes no triple.
+            <code>@nest</code> vanishes on expansion. A scoped context makes one key mean
+            two things. You are holding both pictures in your head at once.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--warm">
+    <div class="wrap">
+      <h2>The treatment</h2>
+      <p class="section__sub">
+        One canonical file holding semantics only. Everything else is generated from
+        it, checked against it, or drawn from it.
+      </p>
+
+      <div class="grid">
+        <div class="card card--blue">
+          <h3>A model, not an artifact</h3>
+          <p>
+            <code>&lt;name&gt;.jsonld.yaml</code> is what you edit and what your reviewer
+            reads. The <code>@context</code> is emitted from it and carries a header saying
+            so. Hand-edit the artifact and CI will tell you.
+          </p>
+        </div>
+        <div class="card card--blue">
+          <h3>Findings with a line number</h3>
+          <p>
+            L0 well-formedness, L1 context errors, L2 lossiness. Every finding carries a
+            stable rule id, a JSON Pointer and a line and column in a file you wrote —
+            never a position in a generated artifact.
+          </p>
+        </div>
+        <div class="card card--blue">
+          <h3>Two coordinated panes</h3>
+          <p>
+            The JSON shape a developer will type, beside the RDF graph it denotes,
+            sharing one selection. A facet that exists on only one side is drawn as
+            visibly absent on the other, rather than as nothing.
+          </p>
+        </div>
+        <div class="card card--blue">
+          <h3>Immutable versions</h3>
+          <p>
+            Freeze a model as a content-addressed version with a manifest that checksums
+            every file. Publish a static tree that serves from GitHub Pages, S3, or any
+            file host with no configuration.
+          </p>
+        </div>
+        <div class="card card--blue">
+          <h3>A diff that has opinions</h3>
+          <p>
+            Two versions compared from their lockfiles, matched by element id so a rename
+            reads as a rename. Every difference classified
+            <code>additive</code>, <code>compatible</code>, <code>breaking</code>,
+            <code>semantic</code> or <code>illegal</code>.
+          </p>
+        </div>
+        <div class="card card--blue">
+          <h3>Offline by construction</h3>
+          <p>
+            Exactly one command touches the network, and a person invokes it. Everything
+            else reads a committed directory of vendored contexts with recorded hashes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="start">
+    <div class="prose prose--wide">
+      <h2 style="border-top:none;padding-top:0;margin-top:0">Getting started</h2>
+      <p>
+        Two pieces: <code>ldm</code>, the command line tool, which is what your pull
+        request runs; and the VS Code extension, which is for authoring. You can use
+        either alone.
+      </p>
+
+<pre><code><span class="t-com"># the CLI</span>
+npm install -g ldm
+
+<span class="t-com"># the extension</span>
+code --install-extension pavlyshyn.jsonld-modeler</code></pre>
+
+      <h3>1. Bring your own context, or start empty</h3>
+      <p>
+        If you already have a <code>@context</code>, import it. Import recovers every
+        facet the context states, and <em>reports what a context structurally cannot
+        carry</em> — class membership, documentation, the intent behind
+        <code>@vocab</code> — rather than inventing it.
+      </p>
+
+<pre><code>ldm import catalogue.jsonld <span class="t-key">--out</span> catalogue.jsonld.yaml</code></pre>
+
+      <div class="callout callout--tool">
+        <img src="assets/img/codex.svg" alt="">
+        <p>
+          <strong>Import then emit is semantically equal to the input.</strong>
+          A second round is byte-identical. If the first emit differs from the file you
+          imported, the difference is formatting or a facet the context expressed in a
+          longer way — the tool will show you which.
+        </p>
+      </div>
+
+      <h3>2. The model</h3>
+      <p>
+        Semantics only. No presentation, no ordering tricks, nothing that belongs to the
+        generated artifact. Comments are yours and survive every tool-driven edit.
+      </p>
+
+<pre><code><span class="t-key">jsonld</span>: <span class="t-str">"1"</span>
+
+<span class="t-key">namespace</span>:
+  <span class="t-key">prefix</span>: cat
+  <span class="t-key">base</span>: <span class="t-str">https://example.org/catalogue#</span>
+
+<span class="t-key">mode</span>: <span class="t-str">"1.1"</span>
+
+<span class="t-key">terms</span>:
+  <span class="t-com"># `@set` is the closest thing JSON-LD has to future-proofing: always an</span>
+  <span class="t-com"># array, so a property that becomes multi-valued later does not change the</span>
+  <span class="t-com"># shape of every document that already exists.</span>
+  <span class="t-key">tags</span>:
+    <span class="t-key">id</span>: tag001
+    <span class="t-key">"@id"</span>: cat:tag
+    <span class="t-key">"@container"</span>: <span class="t-str">"@set"</span>
+
+  <span class="t-key">author</span>:
+    <span class="t-key">id</span>: aut001
+    <span class="t-key">"@id"</span>: cat:author
+    <span class="t-key">"@type"</span>: <span class="t-str">"@id"</span>      <span class="t-com"># without this, an IRI is a string</span>
+
+<span class="t-key">examples</span>:
+  <span class="t-com"># A document that must survive expansion intact.</span>
+  - <span class="t-key">id</span>: exa001
+    <span class="t-key">path</span>: documents/ok.json
+    <span class="t-key">expect</span>: { <span class="t-key">ok</span>: <span class="t-str">true</span> }
+
+  <span class="t-com"># A negative example names the rule ids it must raise. One that merely</span>
+  <span class="t-com"># fails passes even when it fails for the wrong reason.</span>
+  - <span class="t-key">id</span>: exa002
+    <span class="t-key">path</span>: documents/typo.json
+    <span class="t-key">expect</span>:
+      <span class="t-key">rules</span>: [L2.key-dropped]</code></pre>
+
+      <p class="margin-note">
+        <code>id: tag001</code> is the element id. The JSON key and the IRI are both
+        mutable attributes of it — which is how a rename can be detected rather than
+        guessed at from similarity.
+      </p>
+
+      <h3>3. Check what your documents lose</h3>
+
+<pre><code>$ ldm check catalogue.jsonld.yaml
+
+<span class="t-out">documents/typo.json:4:3</span>  L2.key-dropped
+  <span class="t-str">"writtenBy"</span> matched no term and expands to nothing.
+  Expansion still succeeded; this content is simply gone.
+
+<span class="t-out">documents/typo.json:7:3</span>  L2.coercion-did-not-fire
+  <span class="t-str">"https://example.org/ada"</span> reads as an IRI but <span class="t-str">"editor"</span> has no
+  @type: @id, so it expanded as a literal rather than a reference.
+
+2 findings (2 error)</code></pre>
+
+      <p>
+        Exit <code>0</code> clean, <code>1</code> findings at error severity,
+        <code>2</code> a usage error. That is the whole gate.
+      </p>
+
+      <h3>4. Generate the context</h3>
+
+<pre><code>ldm emit catalogue.jsonld.yaml <span class="t-key">--out</span> build</code></pre>
+
+      <p>
+        Two targets. <code>context</code> keeps referenced contexts as a live layer —
+        JSON-LD composes at runtime by design, and that is usually what you want.
+        <code>context-inline</code> flattens them from the vendored copies and
+        <em>reports the fork</em>, because a flattened copy of someone else's vocabulary
+        stops tracking theirs the moment you write it.
+      </p>
+
+      <div class="callout callout--warn">
+        <img src="assets/img/mortar.svg" alt="">
+        <p>
+          <strong>Every emitted artifact says it was generated.</strong>
+          A repository that lets someone hand-edit one will lose that edit. Run
+          <code>ldm emit</code> in CI and compare — the artifact is a build output, and
+          treating it as source is the failure mode this design exists to prevent.
+        </p>
+      </div>
+
+      <h3>5. Vendor the contexts you reference</h3>
+      <p>
+        <code>ldm vendor</code> fetches each referenced context once into a committed
+        directory and records its hash. Every other command then reads only that
+        directory, with the network off.
+      </p>
+
+<pre><code>ldm vendor catalogue.jsonld.yaml           <span class="t-com"># fetches, records hashes</span>
+ldm vendor catalogue.jsonld.yaml --check   <span class="t-com"># verifies, fetches nothing</span></code></pre>
+
+      <p>
+        This is a security boundary, not a convenience. A command that fetches URLs a
+        model names, running against an outside pull request, is a request-forgery
+        primitive. So exactly one command can do it, and a person invokes it.
+      </p>
+    </div>
+  </section>
+
+  <section class="section section--warm">
+    <div class="prose prose--wide">
+      <h2 style="border-top:none;padding-top:0;margin-top:0">Projects, versions, publishing</h2>
+      <p class="lede">
+        Once more than one model exists, the questions change. Which models belong
+        together? What exactly did we publish last March? Is this change safe? A project
+        file answers the first, and immutable versions answer the rest.
+      </p>
+
+<pre><code><span class="t-com"># ldm.project.yaml</span>
+<span class="t-key">project</span>: <span class="t-str">"1"</span>
+<span class="t-key">name</span>: catalogue-suite
+<span class="t-key">baseUrl</span>: <span class="t-str">https://vocab.example.org/</span>
+
+<span class="t-key">models</span>:
+  <span class="t-key">core</span>: models/core.jsonld.yaml
+  <span class="t-key">catalogue</span>: models/catalogue.jsonld.yaml
+
+<span class="t-key">published</span>: published
+<span class="t-key">versions</span>: versions
+<span class="t-key">hosts</span>: [plain, github-pages, s3]</code></pre>
+
+<pre><code>ldm check                                 <span class="t-com"># every model, one report</span>
+ldm version new <span class="t-key">--alias</span> stable            <span class="t-com"># freeze it, label it</span>
+ldm publish                               <span class="t-com"># write the static tree</span>
+ldm diff stable next <span class="t-key">--fail-on</span> breaking    <span class="t-com"># gate the pull request</span>
+ldm search curator                        <span class="t-com"># what already exists, offline</span></code></pre>
+
+      <h3>A version has no name to rename</h3>
+      <p>
+        A version's identity is a hash of its inputs, so there is deliberately no command
+        that renames one. Human names like <code>stable</code> are movable labels over
+        immutable versions — <code>ldm alias rename</code> moves the label,
+        <code>ldm alias set</code> points it at a corrected version, and both leave every
+        published byte identical.
+      </p>
+
+      <h3>The tool does not upload</h3>
+      <p>
+        <code>published/</code> is a static tree you commit and copy wherever you serve
+        from. Every host already has a mature tool for the copying. What this owes you is
+        a tree those tools can copy verbatim — plus a refusal when a name would produce a
+        path your host silently mangles. GitHub Pages drops
+        <code>_</code>-prefixed paths unless <code>.nojekyll</code> is present; S3 has its
+        own opinions about keys without extensions. The host adapters declare those
+        constraints, and the whole tree is validated against every named host
+        <em>before</em> the first write.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Command</th><th>What it does</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>ldm check</code></td><td>Run the validation ladder over a model, or every model in a project</td></tr>
+            <tr><td><code>ldm emit</code></td><td>Generate the <code>@context</code> for a target</td></tr>
+            <tr><td><code>ldm import</code></td><td>Turn an existing <code>@context</code> into a model</td></tr>
+            <tr><td><code>ldm explain</code></td><td>Why a document means what it means, optionally step by step</td></tr>
+            <tr><td><code>ldm vendor</code></td><td>The one command that fetches</td></tr>
+            <tr><td><code>ldm ids</code></td><td>Backfill element ids as a targeted splice</td></tr>
+            <tr><td><code>ldm version new</code></td><td>Freeze a model as an immutable, content-addressed version</td></tr>
+            <tr><td><code>ldm alias</code></td><td><code>set</code>, <code>rename</code>, <code>rm</code>, <code>list</code> — move labels over versions</td></tr>
+            <tr><td><code>ldm publish</code></td><td>Write the static tree, validated against every named host first</td></tr>
+            <tr><td><code>ldm diff</code></td><td>Compare two versions and classify every difference</td></tr>
+            <tr><td><code>ldm search</code></td><td>Find a term across published versions and vendored contexts</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <h2>Conformance is observed, not claimed</h2>
+      <p class="section__sub">
+        Expansion and compaction are implemented in this project rather than delegated,
+        because the lossiness reporting needs a JSON Pointer from every output back to the
+        input that produced it — and no library exposes that. Writing the algorithms is
+        the cost of the diagnosis.
+      </p>
+      <p class="section__sub">
+        So the W3C JSON-LD 1.1 test suite is vendored and run with the network off, and
+        every in-scope case is additionally run through <code>jsonld.js</code> with the
+        outputs compared. Cases that do not pass are listed with a reason.
+        <code>frame</code>, <code>toRdf</code>, <code>fromRdf</code>, <code>flatten</code>
+        and <code>html</code> are out of scope for this release and are reported as such
+        rather than skipped silently.
+      </p>
+      <div class="actions">
+        <a class="btn btn--ghost" href="book/">The handbook →</a>
+        <a class="btn btn--ghost" href="blog/">Notes from the shop →</a>
+      </div>
+    </div>
+  </section>
+
+  <img class="fleuron" src="assets/img/fleuron.svg" alt="">
+
+</main>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <div>
+      <h2>Read</h2>
+      <ul>
+        <li><a href="book/">The JSON-LD handbook</a></li>
+        <li><a href="blog/linked-data.html">What linked data is for</a></li>
+        <li><a href="blog/verifiable-credentials.html">Credentials and the context you sign</a></li>
+        <li><a href="blog/graphs.html">Graphs, and the two pictures</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Build</h2>
+      <ul>
+        <li><a href="https://github.com/Volland/dr-json-ld">Source on GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/ldm">ldm on npm</a></li>
+        <li><a href="https://github.com/Volland/dr-json-ld/issues">Issues</a></li>
+      </ul>
+    </div>
+    <p class="footer__note">
+      Dr. JSON-LD is MIT licensed. A checksum detects accident and casual tampering; it
+      is not a signature, and nothing here implies otherwise.
+    </p>
+  </div>
+  <div class="footer__legal">
+    <span>&copy; 2026 Wolodymyr Pawlyshyn</span>
+    <a href="impressum.html">Impressum</a>
+    <a href="datenschutz.html">Datenschutz</a>
+    <a href="agb.html">AGB</a>
+  </div>
+</footer>
+
+</body>
+</html>

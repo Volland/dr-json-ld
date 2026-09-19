@@ -1,0 +1,28 @@
+jsonld: "1"
+
+namespace:
+  base: https://example.org/ns#
+  prefix: ex
+
+mode: "1.1"
+
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+  schema: https://schema.org/
+
+terms:
+  tags:
+    id: ccc333
+    "@container": "@set"
+    "@id": ex:tag
+
+  author:
+    "@type": "@id"
+    id: bbb222
+    "@id": schema:author
+
+  name:
+    id: aaa111
+    "@id": schema:name
+
+examples: []

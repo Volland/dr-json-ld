@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pavlyshyn.dev/schemas/jsonld-modeler/model.schema.json",
+  "title": "JSON-LD Modeler model",
+  "description": "A .jsonld.yaml model file. The file is about JSON-LD; it is not itself JSON-LD.",
+  "type": "object",
+  "required": ["jsonld", "namespace", "terms"],
+  "additionalProperties": false,
+  "properties": {
+    "jsonld": {
+      "description": "The version of this model format the file is written against.",
+      "const": "1"
+    },
+    "namespace": {
+      "description": "The prefix and base IRI that give this model's own terms their global identity.",
+      "type": "object",
+      "required": ["prefix", "base"],
+      "additionalProperties": false,
+      "properties": {
+        "prefix": { "$ref": "#/$defs/prefixName" },
+        "base": { "$ref": "#/$defs/absoluteIri" }
+      }
+    },
+    "project": {
+      "description": "The project this model belongs to. The named project's file must list this model. A model that declares none behaves exactly as it did before projects existed.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "mode": {
+      "description": "The JSON-LD processing mode this model targets. A property of the model, never a flag on a command.",
+      "enum": ["1.1", "1.0"],
+      "default": "1.1"
+    },
+    "vocab": {
+      "description": "@vocab for the emitted context. Makes every unmapped key expand rather than drop.",
+      "$ref": "#/$defs/iri"
+    },
+    "base": {
+      "description": "@base for the emitted context.",
+      "$ref": "#/$defs/iri"
+    },
+    "prefixes": {
+      "description": "Prefix declarations. Each emits as a term in the generated context.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/prefixName" },
+      "additionalProperties": { "$ref": "#/$defs/absoluteIri" }
+    },
+    "uses": {
+      "description": "Contexts this model builds on but does not own. Referenced, not flattened.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/usesEntry" }
+    },
+    "terms": {
+      "description": "A flat map from JSON key to term definition. A term is never declared as belonging to a class.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/termKey" },
+      "additionalProperties": { "$ref": "#/$defs/term" }
+    },
+    "examples": {
+      "description": "Example documents by path, each with the outcome validating it must produce.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/example" }
+    },
+    "views": {
+      "description": "Named subsets of the model, each forming one pair of diagrams.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/view" }
+    }
+  },
+
+  "$defs": {
+    "elementId": {
+      "description": "A short stable identity. Both the key and the IRI are mutable attributes of it.",
+      "type": "string",
+      "pattern": "^[a-z0-9]{6,12}$"
+    },
+    "prefixName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
+    },
+    "termKey": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "^@" }
+    },
+    "iri": {
+      "description": "An absolute IRI, a compact IRI (prefix:suffix), or a relative reference.",
+      "type": "string",
+      "minLength": 1
+    },
+    "absoluteIri": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*:"
+    },
+
+    "containerValue": {
+      "enum": ["@list", "@set", "@index", "@id", "@type", "@language", "@graph"]
+    },
+
+    "inlineContext": {
+      "description": "A scoped context: null, an IRI, an inline object, or an array of those.",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string" },
+        { "type": "object" },
+        { "type": "array", "items": { "oneOf": [{ "type": "null" }, { "type": "string" }, { "type": "object" }] } }
+      ]
+    },
+
+    "term": {
+      "description": "One JSON-LD term definition. Every 1.1 facet is expressible, plus a raw escape hatch.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+
+        "@id": {
+          "description": "The IRI the key maps to. `null` drops the term.",
+          "oneOf": [{ "$ref": "#/$defs/iri" }, { "type": "null" }]
+        },
+        "@type": {
+          "description": "Type coercion. `@id` is what makes a string a reference rather than a label.",
+          "oneOf": [{ "$ref": "#/$defs/iri" }, { "type": "null" }]
+        },
+        "@container": {
+          "description": "The JSON shape a value takes. With the exception of @list, changes no triple.",
+          "oneOf": [
+            { "$ref": "#/$defs/containerValue" },
+            { "type": "array", "items": { "$ref": "#/$defs/containerValue" }, "uniqueItems": true },
+            { "type": "null" }
+          ]
+        },
+        "@language": {
+          "oneOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "@direction": {
+          "enum": ["ltr", "rtl", null]
+        },
+        "@protected": {
+          "description": "The only facet that constrains what a later context may do.",
+          "type": "boolean"
+        },
+        "@context": {
+          "description": "A term-scoped context. Its effect is positional: it applies below this point.",
+          "$ref": "#/$defs/inlineContext"
+        },
+        "@nest": {
+          "description": "@nest, or a term that itself expands to @nest.",
+          "type": "string"
+        },
+        "@reverse": {
+          "$ref": "#/$defs/iri"
+        },
+        "@prefix": {
+          "description": "Whether this term may be used as a compact-IRI prefix.",
+          "type": "boolean"
+        },
+        "@index": {
+          "$ref": "#/$defs/iri"
+        },
+
+        "raw": {
+          "description": "Any construct the metamodel has not yet given a name. Merged into the emitted definition; reaches the context unchanged.",
+          "type": "object"
+        },
+
+        "note": {
+          "description": "Documentation for this term. Carried by the model; a @context cannot hold it.",
+          "type": "string"
+        }
+      },
+      "anyOf": [
+        { "required": ["@id"] },
+        { "required": ["@reverse"] },
+        { "required": ["raw"] }
+      ]
+    },
+
+    "usesEntry": {
+      "type": "object",
+      "required": ["iri"],
+      "additionalProperties": false,
+      "properties": {
+        "iri": { "$ref": "#/$defs/absoluteIri" },
+        "integrity": {
+          "description": "The hash of the vendored copy this entry was resolved against. Written by `ldm vendor`.",
+          "type": "string",
+          "pattern": "^sha256-[A-Za-z0-9+/]+={0,2}$"
+        },
+        "note": { "type": "string" }
+      }
+    },
+
+    "example": {
+      "type": "object",
+      "required": ["path", "expect"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+        "path": { "type": "string", "minLength": 1 },
+        "note": { "type": "string" },
+        "expect": {
+          "description": "What validating this document must produce. A negative example names the rule ids it must raise.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["ok"],
+              "additionalProperties": false,
+              "properties": {
+                "ok": { "const": true },
+                "maxSeverity": { "enum": ["info", "warning", "error"] }
+              }
+            },
+            {
+              "type": "object",
+              "required": ["rules"],
+              "additionalProperties": false,
+              "properties": {
+                "rules": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "type": "string", "pattern": "^L[0-9]+\\.[a-z0-9-]+$" }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "view": {
+      "type": "object",
+      "required": ["name", "terms"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+        "name": { "type": "string", "minLength": 1 },
+        "note": { "type": "string" },
+        "terms": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

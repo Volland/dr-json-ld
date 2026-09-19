@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128"
+     role="img" aria-labelledby="ldgTitle ldgDesc">
+  <title id="ldgTitle">JSON-LD Modeler</title>
+  <desc id="ldgDesc">The letters L and D drawn as a node-link graph; one vertex is a medical cross.</desc>
+
+  <defs>
+    <linearGradient id="ldgTile" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#2A7DEE"/>
+      <stop offset="1" stop-color="#0B3D8F"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="28" fill="url(#ldgTile)"/>
+
+  <!-- The letterforms are the edges and their vertices are the nodes, so the
+       monogram is literally a graph rather than a picture of one. -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 34 V92 H52"/>
+    <path d="M74 34 V92"/>
+    <path d="M74 34 C104 34 104 92 74 92"/>
+  </g>
+
+  <g fill="#FFFFFF">
+    <circle cx="28" cy="34" r="9"/>
+    <circle cx="28" cy="92" r="9"/>
+    <circle cx="52" cy="92" r="9"/>
+    <circle cx="74" cy="34" r="9"/>
+    <circle cx="74" cy="92" r="9"/>
+  </g>
+
+  <!-- The doctor is one of the nodes: a vertex that is also a medical cross. -->
+  <circle cx="96" cy="63" r="12" fill="#FFFFFF"/>
+  <g fill="#0B3D8F">
+    <rect x="90" y="61" width="12" height="4" rx="2"/>
+    <rect x="94" y="57" width="4" height="12" rx="2"/>
+  </g>
+</svg>

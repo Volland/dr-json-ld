@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Herb sprig">
+  <g fill="none" stroke="#5f7a46" stroke-width="3" stroke-linecap="round">
+    <path d="M32 58 C32 40 32 26 32 10"/>
+    <path d="M32 44 C22 44 16 38 16 30 C26 30 32 36 32 44 Z" fill="#dfe8d4"/>
+    <path d="M32 34 C42 34 48 28 48 20 C38 20 32 26 32 34 Z" fill="#dfe8d4"/>
+    <path d="M32 24 C24 24 19 19 19 12 C27 12 32 17 32 24 Z" fill="#dfe8d4"/>
+  </g>
+  <circle cx="32" cy="10" r="3.5" fill="#c2551d"/>
+</svg>

@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two pictures of the same graph — Dr. JSON-LD</title>
+<meta name="description" content="Every JSON-LD document is both a tree a developer types and a graph a machine reasons over. The gap between the two is where the bugs live.">
+<link rel="icon" href="../assets/img/mark.svg">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="brand" href="../">
+      <img src="../assets/img/mark.svg" alt="">
+      <span>Dr. JSON-LD<small>apothecary for linked data</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="../">The tool</a>
+      <a href="../book/">Handbook</a>
+      <a href="./" aria-current="page">Notes</a>
+      <a href="https://github.com/Volland/dr-json-ld">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <article class="prose prose--wide">
+
+    <p class="post-meta"><span>2026-09-09</span><span>11 min</span><span>Modelling</span></p>
+    <h1 style="font-size:clamp(1.9rem,4vw,2.7rem);line-height:1.12;margin:0 0 1.5rem;font-weight:600">
+      Two pictures of the same graph
+    </h1>
+
+    <p class="lede">
+      A JSON-LD document is two things at once, and they do not look alike. It is a tree,
+      because it is JSON, and a developer will index into it with dots and brackets. It is
+      also a graph, because that is what it denotes, and a machine will traverse it by
+      following IRIs. Most of the difficulty of the format is that these two pictures come
+      apart, and most of the tooling shows you only one.
+    </p>
+
+    <h2>Where the pictures diverge</h2>
+
+    <p>
+      They agree about the simple case. A node with three scalar properties is a
+      three-child tree and a node with three outgoing edges, and the drawings are
+      isomorphic. Nobody needs a tool for that.
+    </p>
+
+    <p>
+      They come apart in three places, and each place corresponds to a JSON-LD 1.1 feature
+      people find hard.
+    </p>
+
+    <h3>Structure with no semantics</h3>
+
+    <p>
+      <code>@nest</code> puts a box in the JSON that does not exist in the graph. The
+      document has an object called <code>details</code>; the graph has no
+      <code>details</code> node and no <code>details</code> edge. The nesting is there so
+      a thirty-key node object can be read by a human.
+    </p>
+
+    <p>
+      <code>@container</code> is the same phenomenon in a different guise.
+      <code>@set</code> guarantees an array where there might have been a scalar;
+      <code>@index</code> turns an array into a keyed object and throws the keys away;
+      <code>@language</code> does the same and keeps them, as language tags on literals.
+      In every case the JSON changes shape. In most, the graph is unmoved.
+    </p>
+
+    <p class="margin-note">
+      <code>@index</code> is the sharpest version: the key is right there in the document,
+      clearly meaningful to whoever wrote it, and it is not in the graph at all. Two
+      readers of the same file disagree about whether that key is data.
+    </p>
+
+    <h3>Semantics with no structure</h3>
+
+    <p>
+      The reverse case is rarer and more disorienting. <code>@reverse</code> produces an
+      edge that points the opposite way from the nesting: the document reads as though the
+      outer node is the subject, and in the graph the inner node is. A developer walking
+      the tree and a machine walking the graph traverse the same relationship in opposite
+      directions.
+    </p>
+
+    <p>
+      Type coercion belongs here too. <code>@type: @id</code> is invisible in the document
+      — the value is a string either way — and it decides whether the graph has an edge or
+      a literal. There is no structural difference to see. There is only a difference in
+      what the structure means.
+    </p>
+
+    <h3>Position-dependent meaning</h3>
+
+    <p>
+      Scoped contexts break the assumption that a key means one thing in a document. Two
+      keys spelled <code>name</code> can be two properties, distinguished only by where
+      they sit. The tree picture handles this naturally — position is what a tree is made
+      of. The graph picture does not have position at all, so the same document produces
+      two distinct edges with no visible reason.
+    </p>
+
+    <p>
+      Neither picture is lying. They are answering different questions.
+    </p>
+
+    <h2>Why one picture is not enough</h2>
+
+    <p>
+      The standard tools each pick a side, and each side has a characteristic blind spot.
+    </p>
+
+    <p>
+      <strong>A JSON editor shows the tree.</strong> You see the shape you will write,
+      which is genuinely most of the day-to-day work. What you cannot see is whether
+      anything you wrote survived, whether that string became an edge or a literal, or
+      whether the <code>name</code> here is the same property as the <code>name</code>
+      twelve lines up.
+    </p>
+
+    <p>
+      <strong>A graph visualiser shows the graph.</strong> You see the model, which is the
+      thing you are actually trying to design. What you cannot see is what a developer
+      will have to type to produce it — and that is the deliverable. A beautifully
+      normalised graph can correspond to a document so awkward that every consumer writes
+      a wrapper around it.
+    </p>
+
+    <p>
+      <strong>An expanded-form dump shows the truth and is unreadable.</strong> It is the
+      ground truth and it is where experienced people go when something is wrong, but it
+      is a debugging output, not a design surface. You cannot hold a fifty-term vocabulary
+      in your head in expanded form.
+    </p>
+
+    <div class="callout callout--tool">
+      <img src="../assets/img/mark.svg" alt="">
+      <p>
+        <strong>So: both, side by side, sharing one selection.</strong>
+        Select a term and it lights up in the JSON pane and in the graph pane
+        simultaneously. Change a facet and watch which pane moves. That is the whole
+        design of the canvas in this tool, and the coordination is the feature — two
+        unlinked panes would be two tabs.
+      </p>
+    </div>
+
+    <h2>Drawing absence</h2>
+
+    <p>
+      The interesting design problem is not showing the two pictures. It is showing the
+      <em>relationship</em> between them, and specifically showing the places where a
+      feature exists on one side and not the other.
+    </p>
+
+    <p>
+      The naive approach draws each pane independently and lets the user notice. That
+      fails, because absence is invisible: if <code>@nest</code> simply does not appear in
+      the graph pane, the user sees a graph pane that looks fine. Nothing signals that
+      something was there and is not.
+    </p>
+
+    <p>
+      The approach taken here is to <strong>draw the absence explicitly</strong>. A
+      <code>@nest</code> group is a solid box in the tree pane and a dashed, greyed
+      outline in the graph pane, labelled as structural. A <code>@container: @set</code>
+      changes the tree pane and puts a small no-effect marker on the corresponding graph
+      edge. Selecting a term with a facet that affects only one side tells you so, in
+      words, rather than leaving you to infer it from a pane that did not move.
+    </p>
+
+    <p>
+      This sounds like a small interaction detail. In use it is the difference between a
+      tool that shows you two views and a tool that teaches you the format, because the
+      gap between the pictures <em>is</em> the format's difficulty, and the gap is what
+      gets drawn.
+    </p>
+
+    <h2>An aside on property graphs</h2>
+
+    <p>
+      People coming from Neo4j or TigerGraph ask, reasonably, why RDF makes this so hard
+      when a property graph does not. The answer is that a property graph has a third
+      picture the RDF model does not: edges and nodes carry their own key-value
+      attributes, so "this relationship has a weight" is a first-class thing rather than
+      a reification exercise.
+    </p>
+
+    <p>
+      That is genuinely more convenient for the modelling most people do, and it is why
+      property graphs dominate inside single organisations. What it gives up is the
+      merge-by-IRI property: two property graphs from different sources do not combine
+      without a mapping, because their node identities and attribute names are local. RDF
+      pays for global mergeability with an austere model, and JSON-LD's containers, nests
+      and scopes are all attempts to make that austere model pleasant to write by hand.
+      Which is exactly why the two pictures diverge — every one of those features is
+      ergonomics layered over a model that does not have them.
+    </p>
+
+    <p>
+      Worth knowing if you are choosing. Also worth knowing if you have chosen RDF and are
+      wondering why the format keeps feeling like it has two personalities. It does, and
+      there is a reason.
+    </p>
+
+    <h2>What to do with this</h2>
+
+    <p>
+      Three practical habits, whether or not you use this tool.
+    </p>
+
+    <p>
+      <strong>When you design, draw the graph.</strong> Nodes, edges, types, cardinality.
+      Decide what exists and what points at what before deciding what the JSON looks like.
+      A model designed from the JSON side acquires accidental structure — nesting that
+      exists because the API returned it that way — and accidental structure is very hard
+      to remove once documents exist.
+    </p>
+
+    <p>
+      <strong>When you review, read the expansion.</strong> Not the context, not the
+      example document: the expansion of the example document. It is the only artifact
+      that shows what was actually said. Ten minutes reading expanded output will find
+      things an hour reading the context will not, because the context shows intent and
+      the expansion shows outcome.
+    </p>
+
+    <p>
+      <strong>When you ship, test both pictures.</strong> Test that the JSON shape is what
+      consumers expect — that is a contract with developers. Test separately that the
+      graph is what you meant — that is a contract with data. They break independently,
+      and a test suite that only covers one of them will let the other rot quietly for a
+      year.
+    </p>
+
+    <p>
+      The two pictures are not a flaw in JSON-LD. They are what it is for: a graph model
+      that a person can write as a tree. But a format that is two things at once needs
+      tools that admit it, and the ones that show you a single picture are, in the most
+      literal sense, telling you half the story.
+    </p>
+
+    <div class="pager">
+      <a href="verifiable-credentials.html">← The context you sign</a>
+      <a href="../book/">The handbook →</a>
+    </div>
+
+    <img class="fleuron" src="../assets/img/fleuron.svg" alt="">
+
+  </article>
+</main>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <div>
+      <h2>Read</h2>
+      <ul>
+        <li><a href="../book/">The JSON-LD handbook</a></li>
+        <li><a href="linked-data.html">What linked data is for</a></li>
+        <li><a href="verifiable-credentials.html">The context you sign</a></li>
+        <li><a href="graphs.html">Two pictures of the same graph</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Build</h2>
+      <ul>
+        <li><a href="../">The tool</a></li>
+        <li><a href="https://github.com/Volland/dr-json-ld">Source on GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/ldm">ldm on npm</a></li>
+      </ul>
+    </div>
+    <p class="footer__note">
+      Dr. JSON-LD is MIT licensed. A checksum detects accident and casual tampering; it
+      is not a signature, and nothing here implies otherwise.
+    </p>
+  </div>
+  <div class="footer__legal">
+    <span>&copy; 2026 Wolodymyr Pawlyshyn</span>
+    <a href="../impressum.html">Impressum</a>
+    <a href="../datenschutz.html">Datenschutz</a>
+    <a href="../agb.html">AGB</a>
+  </div>
+</footer>
+
+</body>
+</html>

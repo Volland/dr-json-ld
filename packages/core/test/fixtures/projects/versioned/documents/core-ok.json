@@ -1,0 +1,5 @@
+{
+  "@id": "https://example.org/things/1",
+  "title": "A thing with a title",
+  "createdBy": "https://example.org/people/ada"
+}

@@ -1,0 +1,35 @@
+{
+  "aliases": [
+    {
+      "model": "core",
+      "name": "stable",
+      "versionId": "vmvjgleby2z8nnht"
+    }
+  ],
+  "index": "1",
+  "project": "versioned-suite",
+  "versions": [
+    {
+      "created": "2026-01-01T00:00:00Z",
+      "files": [
+        "catalogue/v/9a7ydbudq8ynbbls/context.inline.jsonld",
+        "catalogue/v/9a7ydbudq8ynbbls/context.jsonld",
+        "catalogue/v/9a7ydbudq8ynbbls/manifest.json"
+      ],
+      "id": "9a7ydbudq8ynbbls",
+      "manifest": "sha256-xWspjA0aKpvQBigGDKHrbGPyjsPKnFDodOvx3YMn6Co=",
+      "model": "catalogue"
+    },
+    {
+      "created": "2026-01-01T00:00:00Z",
+      "files": [
+        "core/v/vmvjgleby2z8nnht/context.inline.jsonld",
+        "core/v/vmvjgleby2z8nnht/context.jsonld",
+        "core/v/vmvjgleby2z8nnht/manifest.json"
+      ],
+      "id": "vmvjgleby2z8nnht",
+      "manifest": "sha256-VZi8nfNI77KM7qGRCCE9N479nOO2dbtOCtUtNqpq3Lk=",
+      "model": "core"
+    }
+  ]
+}

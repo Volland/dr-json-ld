@@ -1,0 +1,27 @@
+{
+  "examples": [],
+  "format": "1",
+  "mode": "1.1",
+  "namespace": {
+    "base": "https://example.org/catalogue#",
+    "prefix": "cat"
+  },
+  "prefixes": {},
+  "terms": [
+    {
+      "@id": "cat:shelfMark",
+      "id": "cat001",
+      "idWritten": true,
+      "iri": "https://example.org/catalogue#shelfMark",
+      "key": "shelfMark",
+      "note": "Where the item sits on the shelf."
+    }
+  ],
+  "uses": [
+    {
+      "integrity": "self-published",
+      "iri": "https://vocab.example.org/core/v/vmvjgleby2z8nnht/context.jsonld"
+    }
+  ],
+  "views": []
+}

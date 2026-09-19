@@ -4,6 +4,44 @@ jsonld-modeler is a VS Code extension and CLI for authoring JSON-LD contexts as 
 
 It is a sibling of `lpg-modeler`, which does the same job for Labeled Property Graph schemas, and it deliberately copies that project's shape wherever JSON-LD does not force a different answer. Where it diverges — two panes rather than one diagram, a processor written here rather than a schema compiled, contexts that compose at runtime rather than imports that flatten — the divergence is a consequence of what JSON-LD is, and is argued at the section that introduces it.
 
+## Projects
+
+A project names the models that belong together, where their published output goes, and which hosts that output must serve from. It is one file at the root of the directory holding them, and every command resolves a model through it.
+
+A model still works alone: a command given a path and no project behaves exactly as it did before projects existed. The project adds a place to look, not a requirement to have one — which is what makes adopting it a three-step change rather than a migration.
+
+Views stay scoped to one model. A view spanning several would need a term to mean something outside the model that declares it, and [[metamodel#Terms]] is explicit that a term is global to a *context*, not to a repository.
+
+## Versions and the Published Tree
+
+A version is an immutable, content-addressed snapshot of a model: the model as written, the [[emitters#Change Management#Lockfile|lockfile]], the examples, and the emitted artifacts, under a manifest that hashes every file and then hashes itself.
+
+Publishing a context is publishing an interface, and an interface that can be edited in place is not one. A version is never altered — only superseded — and the store refuses every write into one rather than trusting callers not to try.
+
+### Identity
+
+A version's identity is a hash over its *inputs*: the model, the lockfile and the examples. The manifest hashes every file including the generated artifacts, and carries its own self-hash, but the identity does not come from it.
+
+This is not the first answer. The identity was going to be the manifest hash, until the artifacts had to name the version they belong to — which makes a manifest-derived identity circular and non-convergent, since writing the id changes the bytes that determine it. Deriving the identity from the inputs keeps content-addressing intact, because the artifacts are a pure function of those inputs, and lets a consumer holding only a `@context` say which release it is reading.
+
+The self-hash still matters, and is the difference between a checksum and a table of contents: without it, editing a file *and* its manifest entry would verify cleanly.
+
+A hash detects accident and casual tampering. It is not a signature, and the field is called `integrity` so that nobody reads it as one.
+
+### Aliases
+
+`v2`, `stable`, `latest` are movable labels in a separate file that no version references. Retargeting one changes no version.
+
+This is where immutability and human names stop being in tension. There is no command that renames a version, because there is no operation that could — the name *is* the content hash. A user who means "this release should be called v2" is renaming a label; a user who means "the published bytes were wrong" wants a new version and a retargeted label, which is two commands and is the honest shape of the operation.
+
+### Hosts
+
+A host adapter states what a host requires — path characters it cannot serve, a side file it needs — and publishing validates the whole tree against every adapter the project names before writing anything.
+
+The tool does not upload. Uploading means credentials, retries and a permissions model, and every host already has a mature tool for it. What the tool owes is a tree those tools can copy verbatim, and a refusal when a name would produce a path the target host silently mangles. A tree that works nowhere is not worth half-writing, which is why validation precedes the first write.
+
+A context the project itself published resolves from that tree rather than being vendored a second time, so [[processing#Context Resolution#Offline by default]] holds with one fewer copy of the same bytes.
+
 ## Source of Truth
 
 The canonical artifact is a hand-editable YAML model file holding semantics only. The `@context` is generated from it, as every other artifact is. Diagram coordinates live in a sidecar, so rearranging a diagram changes nothing.
@@ -100,7 +138,7 @@ A single diagram of a real vocabulary is unreadable — schema.org alone is on t
 
 Positions are stored in a sidecar keyed by [[metamodel#Stable Element IDs]], nested per view, so renaming a term does not move its box and moving a box does not change the model file.
 
-Whether the two panes share one sidecar with two coordinate spaces or keep separate sidecars is deliberately unsettled; it is recorded as an open question and must be decided by the change that first persists a tree-pane position. The tree pane may need no coordinates at all if its layout is fully derived from structure, which would settle it by default.
+The tree pane persists no coordinates: its layout is fully derived from structure, which settles by default the question of whether the two panes share one sidecar with two coordinate spaces. The sidecar holds graph-pane positions only. A change that first wants a persisted tree-pane position must reopen the question rather than assume an answer.
 
 ## Examples
 
@@ -114,6 +152,26 @@ The extension ships to the Marketplace as `pavlyshyn.jsonld-modeler`; the CLI is
 
 `ldm` rather than `jsonld`, because `jsonld.js` already publishes a `jsonld` binary and a name collision in a tool whose credibility rests on being the careful one about JSON-LD would be a poor first impression. The extension bundle inlines core so that it is self-contained.
 
+The Marketplace icon must be a PNG, so the artwork in `packages/vscode/media/` is authored as SVG and rasterized from it. The mark draws its letterforms as paths rather than setting them as text, because a logo that depended on a font being installed would render differently on whichever machine happened to build it.
+
+### Documentation site
+
+`site/` is a hand-written static site served from GitHub Pages: an introduction to the tool, a nine-chapter JSON-LD handbook, and three essays. No generator and no build step, so the deployed bytes are the committed bytes.
+
+Jekyll runs on this host unless `.nojekyll` is present, and it drops every path beginning with an underscore. The marker is committed and the deploy workflow asserts it, because the failure it prevents is a silent 404 rather than a build error.
+
+The workflow also resolves every relative `href` and `src` against the committed tree before deploying. A relative path that is wrong resolves anyway when a page is opened from disk, so the check has to run somewhere that is not a local browser.
+
+#### Legal pages
+
+The site carries a German Impressum, Datenschutzerklärung and Nutzungsbedingungen, linked from the footer of every page. The operator is resident in Germany, so § 5 DDG applies to a documentation site as much as to a shop.
+
+Two claims in those pages are asserted by the deploy workflow rather than trusted. Every page must link to all three, because an Impressum that is reachable from the landing page and nowhere else is the usual way this obligation is missed. And no page may fetch a subresource from another origin, because the Datenschutzerklärung says none does.
+
+The second claim is why the fonts are self-hosted. Loading them from Google's CDN sends every visitor's IP address to Google, which LG München I ruled unlawful without consent (20.01.2022, 3 O 17493/20) — and a consent banner for a static documentation site is a worse outcome than serving 280 KB of WOFF2. Both families are SIL Open Font Licence 1.1, which permits it.
+
+A checksum is not a signature, and the Nutzungsbedingungen say so in their own clause rather than leaving it to the README. A user who mistakes `integrity` for provenance has made a legally consequential mistake, not merely a technical one.
+
 ## Roadmap
 
 Work is cut into milestones, each of which leaves the tool usable. The first is a thin vertical slice rather than a layer, because the expensive decisions are all at the seams between layers.
@@ -125,6 +183,12 @@ Work is cut into milestones, each of which leaves the tool usable. The first is 
 The terms layer, the processor with source mapping, validation L0 to L2, the context target and its inlined variant, context import, vendored resolution, examples, and the dual-pane canvas.
 
 Every seam is exercised once: splice, IR, source map, host adapter, pane coordination, sidecar, continuous integration. Nothing is built on an untested seam. It is also demoable, which a compiler-first path is not.
+
+What it ships: the terms layer with total JSON-LD 1.1 facet coverage and a published JSON Schema; parse, resolve and a canonically ordered IR; expansion and compaction implemented here with a JSON Pointer carried through every step; an opt-in trace; validation L0 to L2 with a rule-id registry; vendored, hash-pinned context resolution with a single fetcher; the `context` and `context-inline` targets with the capability sets in [[emitters#Capability Matrix]]; import with a semantic round-trip property; the CLI; and the dual-pane canvas with views and the layout sidecar.
+
+What it measured rather than assumed: the processor's conformance against the W3C JSON-LD 1.1 suite and against `jsonld.js`, recorded per case in `docs/conformance/` and summarised in the project config. Expansion passes the large majority of the suite and compaction rather less; both are ratcheted, and the remaining gaps are named by cause rather than tallied.
+
+The open question this milestone settles: **the two panes do not share a layout sidecar.** The tree pane persists no coordinates — its layout is derived entirely from structure — so the sidecar holds graph-pane positions only, keyed by [[metamodel#Stable Element IDs|element id]] and nested per view. Whether a future tree pane needs coordinates is a question for the change that first wants them.
 
 ### Still deferred
 

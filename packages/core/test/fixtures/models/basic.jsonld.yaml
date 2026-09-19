@@ -1,0 +1,29 @@
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+mode: "1.1"
+
+prefixes:
+  schema: https://schema.org/
+  xsd: http://www.w3.org/2001/XMLSchema#
+
+terms:
+  # The display name. A comment the splice must preserve.
+  name:
+    id: aaa111
+    "@id": schema:name
+
+  author:
+    id: bbb222
+    "@id": schema:author
+    "@type": "@id"
+
+  tags:
+    id: ccc333
+    "@id": ex:tag
+    "@container": "@set"
+
+examples: []

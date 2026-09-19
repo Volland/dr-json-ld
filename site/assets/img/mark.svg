@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Dr. JSON-LD">
+  <rect width="128" height="128" rx="26" fill="#c2551d"/>
+  <g fill="none" stroke="#fffbf4" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 34 V92 H52"/><path d="M74 34 V92"/><path d="M74 34 C104 34 104 92 74 92"/>
+  </g>
+  <g fill="#fffbf4">
+    <circle cx="28" cy="34" r="9"/><circle cx="28" cy="92" r="9"/><circle cx="52" cy="92" r="9"/>
+    <circle cx="74" cy="34" r="9"/><circle cx="74" cy="92" r="9"/>
+  </g>
+  <circle cx="96" cy="63" r="12" fill="#1b4f8c"/>
+  <g fill="#fffbf4">
+    <rect x="90" y="61" width="12" height="4" rx="2"/><rect x="94" y="57" width="4" height="12" rx="2"/>
+  </g>
+</svg>

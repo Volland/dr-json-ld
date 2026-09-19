@@ -1,0 +1,435 @@
+/*
+ * Dr. JSON-LD — the house style.
+ *
+ * An apothecary's shop rather than a terminal: parchment, oak, rust-orange ink,
+ * with the tool's own blue reserved for the things the tool actually says. The
+ * conceit is period; the content is not, so the ornament never takes a turn
+ * ahead of the text.
+ */
+
+/* ---------------------------------------------------------------- tokens -- */
+
+:root {
+  --parchment:      #fffbf4;
+  --parchment-warm: #faf0e1;
+  --parchment-deep: #f2e3cd;
+
+  --ink:      #2a1e12;
+  --ink-soft: #5d4a33;
+  --ink-faint:#8a745a;
+
+  --orange:        #c2551d;
+  --orange-bright: #e27a3f;
+  --orange-pale:   #fae3d1;
+
+  /* The tool's blue. Used for what the tool reports, never for decoration. */
+  --blue:        #1b4f8c;
+  --blue-bright: #2e76c4;
+  --blue-pale:   #dee9f7;
+
+  --wood:  #7a5230;
+  --herb:  #5f7a46;
+  --rule:  #e2cfb4;
+
+  --serif: 'EB Garamond', 'Iowan Old Style', 'Palatino Linotype', Palatino,
+           Georgia, 'Times New Roman', serif;
+  --mono:  'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --measure: 34rem;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+  --radius: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --parchment:      #1c1712;
+    --parchment-warm: #241d16;
+    --parchment-deep: #2e251b;
+
+    --ink:       #f3e7d5;
+    --ink-soft:  #c9b699;
+    --ink-faint: #9a866c;
+
+    --orange:        #e8875a;
+    --orange-bright: #f2a077;
+    --orange-pale:   #3a281c;
+
+    --blue:        #8ab8ee;
+    --blue-bright: #a8cbf5;
+    --blue-pale:   #1d2b3d;
+
+    --wood: #b98a5c;
+    --herb: #94ad79;
+    --rule: #3b2f22;
+  }
+}
+
+/* ------------------------------------------------------------------ base -- */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(1.0625rem, 0.4vw + 1rem, 1.1875rem);
+  line-height: 1.65;
+  color: var(--ink);
+  background-color: var(--parchment);
+  /* Laid paper, made of light rather than of an image. */
+  background-image:
+    radial-gradient(ellipse at 15% -10%, rgba(226, 122, 63, 0.10), transparent 55%),
+    radial-gradient(ellipse at 95% 5%, rgba(27, 79, 140, 0.07), transparent 45%);
+  background-attachment: fixed;
+  text-rendering: optimizeLegibility;
+}
+
+img, svg { max-width: 100%; height: auto; }
+
+a { color: var(--orange); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--orange-bright); }
+
+:focus-visible { outline: 2px solid var(--blue-bright); outline-offset: 3px; border-radius: 2px; }
+
+::selection { background: var(--orange-pale); color: var(--ink); }
+
+.skip {
+  position: absolute; left: -9999px;
+  background: var(--parchment); color: var(--ink);
+  padding: 0.6rem 1rem; border: 2px solid var(--orange); border-radius: var(--radius);
+}
+.skip:focus { left: 1rem; top: 1rem; z-index: 100; }
+
+/* --------------------------------------------------------------- masthead -- */
+
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  background: linear-gradient(180deg, var(--parchment-warm), transparent);
+}
+
+.masthead__inner {
+  max-width: 64rem; margin: 0 auto; padding: 1rem var(--gutter);
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+}
+
+.brand {
+  display: flex; align-items: center; gap: 0.7rem;
+  font-weight: 600; font-size: 1.15rem; letter-spacing: 0.01em;
+  color: var(--ink); text-decoration: none; margin-right: auto;
+}
+.brand:hover { color: var(--ink); }
+.brand img { width: 36px; height: 36px; display: block; }
+.brand small {
+  display: block; font-size: 0.68rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-faint); font-weight: 400;
+}
+
+.nav { display: flex; gap: 1.1rem; flex-wrap: wrap; align-items: baseline; }
+.nav a {
+  color: var(--ink-soft); text-decoration: none;
+  font-size: 0.82rem; letter-spacing: 0.13em; text-transform: uppercase;
+  padding-bottom: 2px; border-bottom: 2px solid transparent;
+}
+.nav a:hover { color: var(--orange); }
+.nav a[aria-current='page'] { color: var(--orange); border-bottom-color: var(--orange); }
+
+/* ------------------------------------------------------------------ hero -- */
+
+.hero {
+  max-width: 64rem; margin: 0 auto;
+  padding: clamp(2.5rem, 7vw, 5rem) var(--gutter) clamp(2rem, 5vw, 3.5rem);
+  display: grid; gap: clamp(1.5rem, 4vw, 3rem);
+  grid-template-columns: 1fr;
+  align-items: center;
+}
+@media (min-width: 52rem) { .hero { grid-template-columns: 1.35fr 1fr; } }
+
+.hero h1 {
+  font-size: clamp(2.2rem, 5.5vw, 3.4rem);
+  line-height: 1.08; margin: 0 0 1rem; font-weight: 600; letter-spacing: -0.01em;
+}
+.hero h1 em { font-style: normal; color: var(--orange); }
+
+.hero__lede { font-size: clamp(1.1rem, 1.4vw, 1.3rem); color: var(--ink-soft); margin: 0 0 1.75rem; }
+.hero__art { justify-self: center; width: 100%; max-width: 18rem; }
+
+/* In a display heading the shared `code` background reads as a filled box the
+   size of a word. Keep the monospace, drop the chrome. */
+.hero h1 code {
+  background: none; padding: 0;
+  font-size: 0.78em; letter-spacing: -0.02em;
+}
+
+.eyebrow {
+  font-size: 0.75rem; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--orange); margin: 0 0 0.9rem; font-weight: 600;
+}
+
+/* --------------------------------------------------------------- buttons -- */
+
+.actions { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+
+.btn {
+  display: inline-block; padding: 0.6rem 1.25rem;
+  border-radius: var(--radius); text-decoration: none;
+  font-size: 0.95rem; letter-spacing: 0.02em; border: 1.5px solid var(--orange);
+}
+.btn--primary { background: var(--orange); color: #fffaf4; }
+.btn--primary:hover { background: var(--orange-bright); border-color: var(--orange-bright); color: #fffaf4; }
+.btn--ghost { color: var(--orange); background: transparent; }
+.btn--ghost:hover { background: var(--orange-pale); color: var(--orange); }
+
+/* ---------------------------------------------------------------- layout -- */
+
+.wrap { max-width: 64rem; margin: 0 auto; padding: 0 var(--gutter); }
+.section { padding: clamp(2.5rem, 6vw, 4.5rem) 0; }
+.section--warm {
+  background: var(--parchment-warm);
+  border-block: 1px solid var(--rule);
+}
+
+.section > h2, .section > .wrap > h2 {
+  font-size: clamp(1.5rem, 2.6vw, 2rem); margin: 0 0 0.4rem; font-weight: 600;
+}
+.section__sub { color: var(--ink-soft); margin: 0 0 2rem; max-width: var(--measure); }
+
+/* ----------------------------------------------------------------- cards -- */
+
+.grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+
+.card {
+  background: var(--parchment);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--orange);
+  border-radius: var(--radius);
+  padding: 1.35rem 1.4rem;
+}
+.card h3 { margin: 0 0 0.5rem; font-size: 1.15rem; font-weight: 600; }
+.card p  { margin: 0; color: var(--ink-soft); font-size: 0.97rem; }
+.card--blue { border-top-color: var(--blue); }
+.card__icon { width: 44px; height: 44px; margin-bottom: 0.75rem; display: block; }
+
+a.card { text-decoration: none; color: inherit; display: block; }
+a.card:hover { border-color: var(--orange); background: var(--parchment-warm); }
+
+/* -------------------------------------------------------------- the shelf -- */
+
+/* A band of apothecary jars, used once per page as a divider. */
+.shelf {
+  display: flex; justify-content: center; align-items: flex-end; gap: clamp(0.5rem, 3vw, 2rem);
+  padding: 2rem 0 0; margin: 0;
+  border-bottom: 6px solid var(--wood);
+  border-radius: 0 0 2px 2px;
+}
+.shelf img { width: clamp(2.5rem, 7vw, 4rem); opacity: 0.9; }
+
+/* ----------------------------------------------------------------- prose -- */
+
+.prose { max-width: var(--measure); margin: 0 auto; padding: clamp(2rem, 5vw, 3.5rem) var(--gutter); }
+.prose--wide { max-width: 46rem; }
+
+.prose h2 {
+  font-size: 1.55rem; font-weight: 600; margin: 2.75rem 0 0.75rem;
+  padding-top: 0.6rem; border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+.prose p  { margin: 0 0 1.1rem; }
+.prose ul, .prose ol { margin: 0 0 1.2rem; padding-left: 1.3rem; }
+.prose li { margin-bottom: 0.4rem; }
+.prose strong { font-weight: 600; }
+
+.prose blockquote {
+  margin: 1.5rem 0; padding: 0.4rem 0 0.4rem 1.2rem;
+  border-left: 3px solid var(--orange); color: var(--ink-soft); font-style: italic;
+}
+
+/* An illuminated initial, as a herbal would have. Suppressed on small screens
+   where it would eat a third of the first line. */
+.lede::first-letter {
+  float: left; font-size: 3.6em; line-height: 0.82; font-weight: 600;
+  padding: 0.06em 0.09em 0 0; color: var(--orange);
+}
+@media (max-width: 30rem) { .lede::first-letter { float: none; font-size: inherit; color: inherit; padding: 0; } }
+
+/* Marginalia. Floats into the margin only where there is a margin to float into. */
+.margin-note {
+  font-size: 0.86rem; line-height: 1.5; color: var(--ink-faint);
+  border-left: 2px solid var(--rule); padding-left: 0.8rem; margin: 1.2rem 0;
+}
+@media (min-width: 72rem) {
+  .margin-note {
+    float: right; clear: right; width: 13rem; margin: 0.3rem -15rem 1rem 0;
+    border-left: none; border-right: 2px solid var(--orange-pale);
+    padding-left: 0; padding-right: 0.8rem; text-align: right;
+  }
+}
+
+/* --------------------------------------------------------------- callout -- */
+
+.callout {
+  display: flex; gap: 0.9rem; align-items: flex-start;
+  background: var(--parchment-warm); border: 1px solid var(--rule);
+  border-left: 3px solid var(--herb);
+  border-radius: var(--radius); padding: 1rem 1.15rem; margin: 1.6rem 0;
+  font-size: 0.97rem;
+}
+.callout img { width: 28px; flex: none; margin-top: 0.15rem; }
+.callout p { margin: 0; }
+.callout p + p { margin-top: 0.6rem; }
+.callout--warn { border-left-color: var(--orange); }
+.callout--tool { border-left-color: var(--blue); background: var(--blue-pale); }
+.callout strong { display: block; margin-bottom: 0.2rem; }
+
+/* ------------------------------------------------------------------ code -- */
+
+code {
+  font-family: var(--mono); font-size: 0.86em;
+  background: var(--parchment-deep); padding: 0.12em 0.35em; border-radius: 3px;
+  /* An IRI has no break opportunity, and one in a sentence is wider than a
+     phone. Let it break rather than push the page sideways. */
+  overflow-wrap: break-word;
+}
+
+pre {
+  font-family: var(--mono); font-size: 0.82rem; line-height: 1.6;
+  background: var(--parchment-warm);
+  border: 1px solid var(--rule); border-left: 3px solid var(--orange);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem; overflow-x: auto; margin: 1.4rem 0;
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+
+/* A deliberately small vocabulary, applied by hand: no highlighter runs here. */
+.t-key { color: var(--blue); }
+.t-str { color: var(--herb); }
+.t-com { color: var(--ink-faint); font-style: italic; }
+.t-out { color: var(--orange); }
+
+/* ----------------------------------------------------------------- table -- */
+
+.table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.94rem; }
+th, td { text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th {
+  font-size: 0.74rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-faint); font-weight: 600; border-bottom-width: 2px;
+}
+td code { font-size: 0.8rem; }
+
+/* -------------------------------------------------------- book & chapters -- */
+
+/* `minmax(0, 1fr)` rather than `1fr`: a grid column's automatic minimum is its
+   content's min-content width, so a long unbreakable IRI in a code span would
+   otherwise widen the column past the viewport and scroll the whole page. */
+.book-layout {
+  display: grid; gap: 2rem; max-width: 72rem; margin: 0 auto;
+  padding: 0 var(--gutter);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 60rem) { .book-layout { grid-template-columns: 15rem minmax(0, 1fr); } }
+
+.toc { font-size: 0.92rem; }
+@media (min-width: 60rem) {
+  .toc { position: sticky; top: 1.5rem; align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+}
+.toc h2 {
+  font-size: 0.74rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-faint); margin: 0 0 0.7rem; border: none; padding: 0;
+}
+.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: ch; }
+.toc li { counter-increment: ch; margin-bottom: 0.15rem; }
+.toc a {
+  display: block; padding: 0.3rem 0.5rem 0.3rem 2rem; text-indent: -1.5rem;
+  color: var(--ink-soft); text-decoration: none; border-radius: 3px; line-height: 1.35;
+}
+.toc a::before { content: counter(ch) '. '; color: var(--orange); }
+.toc a:hover { background: var(--orange-pale); color: var(--ink); }
+
+.chapter { scroll-margin-top: 1.5rem; padding-bottom: 1rem; }
+.chapter + .chapter { margin-top: 3rem; padding-top: 2.5rem; border-top: 1px solid var(--rule); }
+.chapter__num {
+  font-size: 0.74rem; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--orange); margin: 0 0 0.3rem; font-weight: 600;
+}
+.chapter h2 { border: none; padding: 0; margin: 0 0 1rem; font-size: clamp(1.5rem, 3vw, 2rem); }
+
+/* ------------------------------------------------------------------ post -- */
+
+.post-meta {
+  font-size: 0.78rem; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--ink-faint); margin: 0 0 0.6rem;
+}
+.post-meta span + span::before { content: ' · '; }
+
+.post-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 1.5rem; }
+.post-list article {
+  border: 1px solid var(--rule); border-left: 3px solid var(--orange);
+  border-radius: var(--radius); padding: 1.4rem 1.5rem; background: var(--parchment);
+}
+.post-list h3 { margin: 0.2rem 0 0.5rem; font-size: 1.3rem; font-weight: 600; }
+.post-list h3 a { text-decoration: none; color: var(--ink); }
+.post-list h3 a:hover { color: var(--orange); }
+.post-list p { margin: 0; color: var(--ink-soft); }
+
+.pager {
+  display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--rule);
+  font-size: 0.94rem;
+}
+
+/* --------------------------------------------------------------- ornament -- */
+
+.fleuron { display: block; margin: 2.5rem auto; width: 7rem; opacity: 0.75; }
+
+/* ---------------------------------------------------------------- footer -- */
+
+.footer {
+  border-top: 1px solid var(--rule); background: var(--parchment-warm);
+  margin-top: 3rem; padding: 2.5rem 0;
+  font-size: 0.9rem; color: var(--ink-soft);
+}
+.footer__inner {
+  max-width: 64rem; margin: 0 auto; padding: 0 var(--gutter);
+  display: flex; gap: 2rem; flex-wrap: wrap; justify-content: space-between;
+}
+.footer h2 {
+  font-size: 0.74rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-faint); margin: 0 0 0.6rem;
+}
+.footer ul { list-style: none; margin: 0; padding: 0; }
+.footer li { margin-bottom: 0.3rem; }
+.footer a { color: var(--ink-soft); text-decoration: none; }
+.footer a:hover { color: var(--orange); }
+.footer__note { max-width: 22rem; margin: 0; color: var(--ink-faint); }
+
+/* The book's prose sits in the grid's second column, so it drops the centring
+   and the gutter the standalone .prose pages need. */
+.book-layout .prose { max-width: 44rem; margin: 0; padding: 0 0 2rem; }
+
+/* ----------------------------------------------------------- legal pages -- */
+
+/* A softer aside inside prose, for the sentences that qualify a legal
+   statement rather than make one. */
+.dim { color: var(--ink-faint); font-size: 0.92em; }
+.prose .dim { margin-bottom: 1.1rem; }
+
+/* The legal row sits below the footer's columns, because Impressum,
+   Datenschutz and AGB are obligations rather than reading. German law wants
+   the Impressum reachable from every page in at most two clicks; one is
+   easier to defend than two. */
+.footer__legal {
+  max-width: 64rem; margin: 1.75rem auto 0;
+  padding: 1.2rem var(--gutter) 0;
+  border-top: 1px solid var(--rule);
+  display: flex; gap: 0.4rem 1.3rem; flex-wrap: wrap; align-items: baseline;
+  font-size: 0.84rem; color: var(--ink-faint);
+}
+.footer__legal > span:first-child { margin-right: auto; }
+.footer__legal a { color: var(--ink-faint); text-decoration: none; }
+.footer__legal a:hover { color: var(--orange); }
+
+/* An introductory paragraph without the illuminated initial. The drop cap is a
+   herbal's flourish and reads as a joke above a one-sentence legal statement. */
+.standfirst { font-size: 1.1rem; color: var(--ink-soft); margin: 0 0 0.5rem; }

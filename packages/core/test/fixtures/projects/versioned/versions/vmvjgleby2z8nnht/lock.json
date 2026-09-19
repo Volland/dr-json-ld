@@ -1,0 +1,41 @@
+{
+  "examples": [
+    {
+      "expect": {
+        "kind": "positive",
+        "maxSeverity": "info"
+      },
+      "id": "cex001",
+      "idWritten": true,
+      "path": "../documents/core-ok.json"
+    }
+  ],
+  "format": "1",
+  "mode": "1.1",
+  "namespace": {
+    "base": "https://example.org/core#",
+    "prefix": "core"
+  },
+  "prefixes": {},
+  "terms": [
+    {
+      "@id": "core:title",
+      "id": "cor001",
+      "idWritten": true,
+      "iri": "https://example.org/core#title",
+      "key": "title",
+      "note": "The title of the thing."
+    },
+    {
+      "@id": "core:createdBy",
+      "@type": "@id",
+      "id": "cor002",
+      "idWritten": true,
+      "iri": "https://example.org/core#createdBy",
+      "key": "createdBy",
+      "note": "Who made it. Coerced, so the value is a reference and not a label."
+    }
+  ],
+  "uses": [],
+  "views": []
+}

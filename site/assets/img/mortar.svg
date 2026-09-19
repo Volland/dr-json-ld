@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mortar and pestle">
+  <g fill="none" stroke="#7a5230" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M38 12 L50 24" stroke="#c2551d" stroke-width="4"/>
+    <circle cx="52" cy="26" r="4" fill="#c2551d" stroke="#c2551d"/>
+    <path d="M12 28 h34 v6 c0 12 -7 18 -17 18 s-17 -6 -17 -18 Z" fill="#fffbf4"/>
+    <path d="M8 28 h42" stroke-width="3.5"/>
+    <path d="M22 40 h14" stroke="#5f7a46" stroke-width="2.5"/>
+  </g>
+</svg>

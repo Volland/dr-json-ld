@@ -1,0 +1,96 @@
+{
+  "name": "jsonld-modeler",
+  "displayName": "JSON-LD Modeler",
+  "description": "Author a JSON-LD @context as a reviewable YAML model, see it as two coordinated diagrams, and find out what your documents are silently losing.",
+  "publisher": "pavlyshyn",
+  "version": "0.1.0",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Volland/dr-json-ld"
+  },
+  "homepage": "https://volland.github.io/dr-json-ld/",
+  "bugs": {
+    "url": "https://github.com/Volland/dr-json-ld/issues"
+  },
+  "keywords": [
+    "json-ld",
+    "jsonld",
+    "linked data",
+    "rdf",
+    "semantic web",
+    "context",
+    "vocabulary",
+    "verifiable credentials",
+    "schema"
+  ],
+  "galleryBanner": {
+    "color": "#0B3D8F",
+    "theme": "dark"
+  },
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization"
+  ],
+  "main": "./dist/extension.js",
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "activationEvents": [
+    "onLanguage:yaml"
+  ],
+  "contributes": {
+    "jsonValidation": [
+      {
+        "fileMatch": "*.jsonld.yaml",
+        "url": "./schema/model.schema.json"
+      },
+      {
+        "fileMatch": "ldm.project.yaml",
+        "url": "./schema/project.schema.json"
+      }
+    ],
+    "yamlValidation": [
+      {
+        "fileMatch": "*.jsonld.yaml",
+        "url": "./schema/model.schema.json"
+      },
+      {
+        "fileMatch": "ldm.project.yaml",
+        "url": "./schema/project.schema.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "jsonldModeler.openCanvas",
+        "title": "JSON-LD Modeler: Open Canvas"
+      },
+      {
+        "command": "jsonldModeler.newModel",
+        "title": "JSON-LD Modeler: New Model"
+      },
+      {
+        "command": "jsonldModeler.backfillIds",
+        "title": "JSON-LD Modeler: Backfill Element Ids"
+      }
+    ]
+  },
+  "dependencies": {
+    "@jsonld-modeler/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "@xyflow/react": "^12.3.0",
+    "elkjs": "^0.9.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0"
+  }
+}

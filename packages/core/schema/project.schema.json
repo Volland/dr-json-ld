@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pavlyshyn.dev/schemas/jsonld-modeler/project.schema.json",
+  "title": "JSON-LD Modeler project",
+  "description": "An ldm.project.yaml file. Declares which models belong together, where published versions are written, and which hosts the published tree must serve from.",
+  "type": "object",
+  "required": ["project", "name", "models"],
+  "additionalProperties": false,
+  "properties": {
+    "project": {
+      "description": "The version of the project format this file is written against.",
+      "const": "1"
+    },
+    "name": {
+      "description": "What this project is called. Appears in the generated-file header of every artifact it publishes.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "models": {
+      "description": "A map from model name to the model file's path, relative to this file. A model belongs to at most one project.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/modelName" },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\.jsonld\\.yaml$"
+      }
+    },
+    "baseUrl": {
+      "description": "The absolute IRI the published tree is served from. A model's `uses` entry under this IRI resolves from the tree rather than the vendor directory, and no network request is made for it.",
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9+.-]*://"
+    },
+    "published": {
+      "description": "The directory published versions are written into, relative to this file. Committed alongside the models.",
+      "type": "string",
+      "minLength": 1,
+      "default": "published"
+    },
+    "versions": {
+      "description": "The directory immutable versions are stored in, relative to this file.",
+      "type": "string",
+      "minLength": 1,
+      "default": "versions"
+    },
+    "hosts": {
+      "description": "The hosts the published tree must be valid for. Publishing fails if a name produces a path any of them cannot serve.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/hostName" },
+      "default": ["plain"]
+    },
+    "note": {
+      "description": "Documentation for this project. Carried by the project file; a published tree cannot hold it.",
+      "type": "string"
+    }
+  },
+
+  "$defs": {
+    "modelName": {
+      "description": "How a command names this model. Not the file name, and not the model's namespace prefix.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "hostName": {
+      "description": "A host adapter this build knows. Each declares the path constraints and side files that host requires.",
+      "enum": ["plain", "github-pages", "s3"]
+    }
+  }
+}

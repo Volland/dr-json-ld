@@ -1,0 +1,8 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "dcterms": "http://purl.org/dc/terms/",
+    "title": "dcterms:title",
+    "curator": { "@id": "dcterms:contributor", "@type": "@id" }
+  }
+}

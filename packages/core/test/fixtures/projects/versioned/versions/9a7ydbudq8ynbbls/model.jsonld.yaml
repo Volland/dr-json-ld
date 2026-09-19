@@ -1,0 +1,23 @@
+# Builds on a version its sibling published. The reference resolves from the
+# published tree: no network, and no second vendored copy of bytes already here.
+
+jsonld: "1"
+project: versioned-suite
+
+namespace:
+  prefix: cat
+  base: https://example.org/catalogue#
+
+mode: "1.1"
+
+uses:
+  - iri: https://vocab.example.org/core/v/vmvjgleby2z8nnht/context.jsonld
+    integrity: self-published
+
+terms:
+  shelfMark:
+    id: cat001
+    "@id": cat:shelfMark
+    note: Where the item sits on the shelf.
+
+examples: []

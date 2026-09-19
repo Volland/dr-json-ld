@@ -1,0 +1,6 @@
+{
+  "@id": "https://example.org/things/2",
+  "title": "This key maps to nothing",
+  "writtenBy": "Nor does this one",
+  "keywords": ["neither", "do", "these"]
+}

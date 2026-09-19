@@ -2,3 +2,7 @@
 .mcp.json
 lpg-modeler
 node_modules
+dist
+*.tsbuildinfo
+.omc
+.gstack/

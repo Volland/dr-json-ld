@@ -1,0 +1,25 @@
+jsonld: "1"
+project: catalogue-suite
+
+namespace:
+  prefix: cat
+  base: https://example.org/catalogue#
+
+mode: "1.1"
+
+terms:
+  title:
+    id: cat001
+    "@id": cat:title
+    note: The title of the catalogue.
+
+  curator:
+    id: cat002
+    "@id": cat:curator
+    "@type": "@id"
+    note: Who curates it. Coerced, so the value is a reference.
+
+examples:
+  - id: cex001
+    path: ../documents/catalogue-ok.json
+    expect: { ok: true }

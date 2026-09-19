@@ -12,6 +12,22 @@ The matrix is declared from the first target rather than retrofitted when a seco
 
 For milestone 1 the matrix has one interesting entry: a model targeting [[metamodel#Processing Mode|processing mode]] 1.0 that uses a 1.1-only facet. The context still emits, and the downgrade says what a 1.0 processor will do with it instead.
 
+### Shipped capability sets
+
+Both context targets declare the same seven capabilities and differ in exactly one. Keeping the rest identical is what makes the difference legible, and a test asserts that only `external-reference` differs.
+
+| capability | `context` | `context-inline` |
+| --- | --- | --- |
+| `external-reference` | `full` — references stay live | `downgraded` — flattened, forking upstream |
+| `terms` | `full` | `full` |
+| `prefixes` | `full` | `full` |
+| `scoped-contexts` | `full` | `full` |
+| `documentation` | `none` — a context has nowhere to put a note | `none` |
+| `element-ids` | `none` — identity stays in the model | `none` |
+| `examples` | `none` — examples stay in the model | `none` |
+
+A `none` entry is named in the artifact's header rather than left to be noticed. A downgrade's comment sits at the position it concerns, which means an emitted artifact is JSON with `//` lines; the execution test strips them and hands the strict JSON to an independent implementation, so what is verified is the same bytes minus the commentary.
+
 ## Context Target
 
 The default target emits a `@context` document that references its external contexts by IRI, preserving the array form, with the model's own terms as the final layer.
@@ -58,15 +74,17 @@ Both are strictly derivative and are the easiest things to defer. The documentat
 
 ## Change Management
 
-A committed lockfile holding a canonical, stable-ordered snapshot of the resolved IR, diffed against the current model to classify what changed.
+A canonical, stable-ordered snapshot of the resolved IR carried by every version, diffed between two of them to classify what changed.
 
-This is the feature that turns the tool from a convenience into something an organization adopts, because publishing a context is publishing an interface and nothing in the JSON-LD ecosystem tells you when you have broken it. Deferred to milestone 3, but the IR serializer orders keys stably from the start so that adding it later disturbs nothing.
+This is the feature that turns the tool from a convenience into something an organization adopts, because publishing a context is publishing an interface and nothing in the JSON-LD ecosystem tells you when you have broken it. It was planned for milestone 3 and pulled forward with versioning: an immutable version whose difference from its predecessor cannot be named is a filing system, not a release process.
 
 ### Lockfile
 
-Canonical JSON of the resolved IR, arrays sorted by [[metamodel#Stable Element IDs|element id]], object keys sorted, with a revision counter. It is committed alongside the model.
+Canonical JSON of the resolved IR, arrays sorted by [[metamodel#Stable Element IDs|element id]], object keys sorted. It lives inside each [[architecture#Versions and the Published Tree|version]].
 
 Sorting by id rather than by name means reordering declarations changes nothing and a rename does not present as a move. Locking a model whose ids are derived rather than written is refused, because a rename could not then be told from a removal plus an addition.
+
+This section originally placed the lockfile beside the model. It moved, and the reason is comparison: comparing two versions must work when neither model file is present — from a published tree alone, or between two tags. A lockfile beside the working tree can only ever compare the present against one past, never two pasts. The content is unchanged; only where it lives is.
 
 ### Change Classification
 
@@ -74,7 +92,9 @@ Every change is matched by element id and classified: `additive`, `compatible`, 
 
 The five classes exist because JSON-LD's failure modes do not collapse into the usual three. A JSON key change is `breaking` — consumers' documents stop compacting the same way — while asserting nothing different about the data. An IRI change is `semantic`: every document still parses and every one now means something else, which is more dangerous than a break and would be misfiled as one. Removing a `@protected` term is `illegal`, since the protection was a promise to downstream contexts. Adding `@container: @set` is `compatible`. An ambiguous direction classifies as `breaking`, because a false alarm costs a review and a false `additive` costs production data.
 
-`ldm diff --fail-on` gates a pull request on the class.
+`ldm diff --fail-on` gates a pull request on the class, comparing two versions by identity or by alias.
+
+The classifier operates on the terms layer, which is complete. When the [[metamodel#Shapes|shapes layer]] lands it adds classes of difference, not a redesign — the five classes were chosen for JSON-LD's failure modes rather than for shapes.
 
 ## Verification
 

@@ -24,6 +24,8 @@ A model declares prefixes and may declare `@vocab`. Both are terms in the emitte
 
 `@vocab` deserves a warning the tool is expected to give: it makes every unmapped key expand rather than drop, which converts the loudest failure in [[validation#The Ladder#L2 Lossiness]] into a silent one. A key with a typo becomes a real IRI nobody serves. It is the right tool for a closed internal vocabulary and the wrong one for a published context, and the distinction belongs in the guidance catalog rather than in a refusal.
 
+The implementation settled two things here. A model's namespace prefix is its identity rather than a declaration, so it is kept out of the declared `prefixes` and merged in only where resolution needs it — emitting it unasked would add a term to the artifact that the author never wrote, and an import round trip would read it back as one. And a compact IRI is resolved against the declared prefixes *before* being tested as an absolute IRI, because `schema:name` satisfies both readings and testing the other way round silently mints `schema:name` as its own scheme.
+
 ### Scoped Contexts
 
 A term or a type may carry its own context, which changes the active context below the point where it applies. The metamodel holds type-scoped and property-scoped contexts as first-class, along with `@propagate`.
@@ -54,11 +56,17 @@ Every term, shape and example carries a short generated identifier, backfilled b
 
 Ids are what make a rename a rename. Without them, a key change is indistinguishable from a delete plus an add, which would lose the box's position on every diagram, lose the shape references pointing at it, and — once the lockfile exists — report a breaking change as a removal and an unrelated addition. A file that carries no identifiers yet is read with derived ones, which follow the key: they survive a reload but not a rename, until the tool writes real ones in.
 
+Ids are written as a targeted splice rather than by re-serialising, for the reason in [[architecture#Editing Surface#Targeted edits]], and the splice is computed from the *key's* range rather than the value's: a term's value is the mapping that starts on the next line, so inserting relative to it puts the id inside the first facet instead of beside it.
+
 ## Namespaces
 
 A model declares a prefix and a base IRI, which together give its own terms their global identity. Identity is the IRI, never the file path.
 
-A vocabulary that is worth writing down is worth being referenceable, and a term whose identity depended on where its file happened to sit could not be referenced by anyone else. This also means minting IRIs is a commitment the tool should say out loud: an IRI that resolves to nothing is a defensible choice, and one made by accident is not. What the tool should advise about publishing those IRIs is an open question recorded in the project config.
+A vocabulary that is worth writing down is worth being referenceable, and a term whose identity depended on where its file happened to sit could not be referenced by anyone else. This also means minting IRIs is a commitment the tool should say out loud: an IRI that resolves to nothing is a defensible choice, and one made by accident is not.
+
+Versioning does not touch this. A model may name the [[architecture#Projects|project]] it belongs to, and a project publishes each version at its own path — but a term's IRI is what the model declares and nothing else. A term does not acquire a version number, and the same term in two versions is the same term. What is versioned is the artifact, not the meaning.
+
+That separation is what keeps rename detection working across a version boundary: matching is by [[metamodel#Stable Element IDs|element id]], so a key change reads as a key change and an IRI change reads as a meaning change, in a comparison of two releases exactly as in one working tree.
 
 ## Shapes
 
@@ -73,6 +81,8 @@ One question is settled in advance because it decides the layer's shape: cardina
 A model declares each example document by path, names what it is meant to exercise, and records the outcome validating it must produce, including the specific findings a negative example must raise.
 
 An example without an expectation cannot fail usefully, because nothing says whether the document or the model was wrong. Recording the expectation makes the model self-testing in continuous integration, gives the [[architecture#Panes|canvas]] real data to project, and — because a negative example names its finding ids — makes the validator's own test suite and the teaching material the same artifact. See [[validation#Expected Outcomes]].
+
+A positive example tolerates nothing above `info` unless it says otherwise. Defaulting to tolerating a warning was tried and rejected: lossiness is a warning, and it is the thing this tool exists to catch, so that default would have made the flagship finding non-failing in continuous integration.
 
 ## Format Version
 

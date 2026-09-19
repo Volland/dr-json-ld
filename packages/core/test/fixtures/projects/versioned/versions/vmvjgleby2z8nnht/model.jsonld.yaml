@@ -1,0 +1,27 @@
+# The shared vocabulary. Published first; the catalogue builds on a version of it.
+
+jsonld: "1"
+project: versioned-suite
+
+namespace:
+  prefix: core
+  base: https://example.org/core#
+
+mode: "1.1"
+
+terms:
+  title:
+    id: cor001
+    "@id": core:title
+    note: The title of the thing.
+
+  createdBy:
+    id: cor002
+    "@id": core:createdBy
+    "@type": "@id"
+    note: Who made it. Coerced, so the value is a reference and not a label.
+
+examples:
+  - id: cex001
+    path: ../documents/core-ok.json
+    expect: { ok: true }

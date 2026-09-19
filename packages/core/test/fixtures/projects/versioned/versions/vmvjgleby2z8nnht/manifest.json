@@ -1,0 +1,36 @@
+{
+  "created": "2026-01-01T00:00:00Z",
+  "files": [
+    {
+      "bytes": 760,
+      "integrity": "sha256-81zGYljZzQAhwiHw8YqtRZ5V+0IDhSnvanAnFeuF3o4=",
+      "path": "context/context.inline.jsonld"
+    },
+    {
+      "bytes": 746,
+      "integrity": "sha256-Xk9YWFb9cIE3UqcNHNzLUgcgLLXVMGqWVJGwS0dusIU=",
+      "path": "context/context.jsonld"
+    },
+    {
+      "bytes": 128,
+      "integrity": "sha256-0KgFx984xRrVqrVY2R9IHLAmilfpzctENrccKo1ulv4=",
+      "path": "examples/core-ok.json"
+    },
+    {
+      "bytes": 861,
+      "integrity": "sha256-8aOPenwitGoYHpZ6NYZGoa/6vbQ40wTVezbTIVcQTC4=",
+      "path": "lock.json"
+    },
+    {
+      "bytes": 521,
+      "integrity": "sha256-bYy8kYG842SUyAFh60tggjQxDzGSA1gQmmtkkg9n5Qw=",
+      "path": "model.jsonld.yaml"
+    }
+  ],
+  "id": "vmvjgleby2z8nnht",
+  "integrity": "sha256-VZi8nfNI77KM7qGRCCE9N479nOO2dbtOCtUtNqpq3Lk=",
+  "lineage": {},
+  "manifest": "1",
+  "model": "core",
+  "project": "versioned-suite"
+}

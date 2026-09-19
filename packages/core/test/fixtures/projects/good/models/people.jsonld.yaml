@@ -1,0 +1,16 @@
+jsonld: "1"
+project: catalogue-suite
+
+namespace:
+  prefix: ppl
+  base: https://example.org/people#
+
+mode: "1.1"
+
+terms:
+  fullName:
+    id: ppl001
+    "@id": ppl:fullName
+    note: A person's full name.
+
+examples: []

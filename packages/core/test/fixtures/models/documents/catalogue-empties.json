@@ -1,0 +1,7 @@
+{
+  "@id": "https://example.org/catalogue/2",
+  "name": "None of these keys are in the model",
+  "writtenBy": "https://example.org/people/ada",
+  "keywords": ["gone", "also gone"],
+  "nested": { "alsoGone": true }
+}

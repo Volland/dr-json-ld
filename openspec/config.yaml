@@ -78,7 +78,9 @@ context: |
       explanation exist to serve authoring, not as products in their own right.
   2.  The YAML model is canonical and holds semantics only. The `@context` is an
       emitted artifact. Layout is a separate sidecar so rearranging a diagram never
-      dirties the semantic diff.
+      dirties the semantic diff. A project file is a second canonical file kind: it
+      says which models belong together and where output goes, and holds no
+      semantics of its own. A published version is emitted, never authored.
   3.  An external context is referenced live by default, keeping the array form that
       JSON-LD's own model of composition assumes. Inlining a flattened snapshot is a
       separate target that reports the fork as a downgrade.
@@ -110,7 +112,10 @@ context: |
       parses. Renames are detected via ids, never inferred from similarity.
   12. Changes against the lockfile are classified `additive`, `compatible`,
       `breaking`, `semantic` or `illegal`. Removing a protected term is illegal.
-      An ambiguous direction classifies as `breaking`.
+      An ambiguous direction classifies as `breaking`. Implemented rather than
+      amended by `add-project-versioning-and-publishing`; the lockfile lives
+      inside a version, so two past releases can be compared and not only the
+      present against one past.
   13. Examples are declared in the model, stored as their own files, and carry an
       expected outcome. A negative example names the finding ids it must produce.
       The model is self-testing in CI.
@@ -142,6 +147,26 @@ context: |
           vendored hash-pinned context resolution; examples with expected outcomes;
           the dual-pane canvas with the layout sidecar and views; CLI `check`,
           `emit`, `import`, `vendor`.
+
+  M1 SHIPPED: all of the above, plus `ldm ids` and `ldm explain --trace`, which
+          the plan implied but did not list. Nothing planned was dropped. The
+          processor is complete in surface and incomplete in conformance - see
+          "Measured behaviour" for the pass rates and the named gaps. Closing
+          those gaps is ordinary work against the existing ratchets, not a new
+          milestone.
+
+          Worth moving forward, because M1 measured its cost as lower than
+          assumed: the W3C suite harness and the differential oracle are already
+          general over a named suite class, so frame, toRdf and fromRdf
+          conformance becomes a fixture-and-ratchet change rather than a build.
+          It still waits on the algorithms themselves, which stay deferred.
+
+          No locked decision was amended. Decision 9 was tested hardest: an
+          emitted artifact must be executed by an independent implementation,
+          and the capability matrix also wants a comment at the lossy position.
+          JSON cannot hold a comment, so the artifact is JSON with `//` lines and
+          the execution test strips them. The decision stands; what it costs is
+          now recorded under "Measured behaviour".
   M1 OUT: the shapes layer, SHACL, frame, JSON Schema, vocabulary document, TS
           types, docs site, RDF import, the lockfile and change classifier, the
           lint catalog and explanation corpus, the LLM layer, the extracted shared
@@ -152,14 +177,26 @@ context: |
       emitter and it completes the validation promise.
 
   M3+: frame and JSON Schema as a pair, the vocabulary document, TS types and the
-      docs site, RDF import, the lockfile and change classifier as a PR gate, the
-      guidance catalog, and the extracted shared package once duplication with
-      `lpg-modeler` has shown where the seam actually falls.
+      docs site, RDF import, the guidance catalog, and the extracted shared
+      package once duplication with `lpg-modeler` has shown where the seam
+      actually falls.
+
+      MOVED OUT by `add-project-versioning-and-publishing`: the lockfile and the
+      change classifier now ship. An immutable version whose difference from its
+      predecessor cannot be named is a filing system rather than a release
+      process, so the two arrived together. `ldm diff --fail-on` gates a pull
+      request on the class today.
+
+      CHEAPER THAN ASSUMED, per the same change: a host adapter is a declared
+      constraint set rather than a deployment procedure, so a fourth host is a
+      table entry rather than a feature. Uploading stays out - every host has a
+      mature tool for it, and credentials are not this tool's business.
 
   Deferred is not cancelled. Every deferred item is accounted for in `lat.md/` and
-  must stay reachable from the design. Nothing may assume a lockfile exists, but the
-  IR serializer orders keys stably so one can be added later. Nothing may assume a
-  shapes layer exists, but the terms layer must not occupy names it will need.
+  must stay reachable from the design. The lockfile now exists and lives inside a
+  version; the IR serializer's stable key order, written for it, is what made
+  adding it disturb nothing. Nothing may assume a shapes layer exists, but the
+  terms layer must not occupy names it will need.
 
   ## Open questions - resolve in the proposal that first needs them
 
@@ -171,20 +208,153 @@ context: |
     coercion - but the metamodel spec must say so before M2 begins.
   - How a scoped context is created on the canvas, as opposed to how it is drawn.
   - Whether named graphs and `@graph` are in the metamodel at all.
-  - Whether the two panes share one layout sidecar with two coordinate spaces.
+  - SETTLED by `add-jsonld-context-modeler`: the two panes do **not** share a
+    layout sidecar. The tree pane persists no coordinates - its layout is derived
+    entirely from structure - so the sidecar holds graph-pane positions only,
+    keyed by element id and nested per view. A change that first wants a
+    persisted tree-pane position must reopen this rather than assume an answer.
   - The aggregation strategy for an instance graph over a large payload.
   - Where the extracted shared package lives once it exists.
-  - The publishing strategy for an emitted context: stable dereferenceable URLs,
-    versioned paths, content negotiation. The guidance catalog cannot advise on
-    this until the tool has an opinion.
+  - SETTLED by `add-project-versioning-and-publishing`: the publishing strategy is
+    versioned static paths plus movable aliases, and no content negotiation. A
+    version is reachable at a path carrying its identity and an alias at a path
+    carrying its name; both return the same bytes. The tree must serve from a
+    dumb file host, so anything needing a rewrite rule or server-side negotiation
+    is refused at publish time rather than discovered in production. The guidance
+    catalog can now advise on this.
 
   ## Measured behaviour - do not re-assert from memory
 
-  Nothing is measured yet. As the processor and the emitters are built, record here
-  what was observed rather than what the specification was expected to imply:
-  W3C suite cases that fail and why, divergences from `jsonld.js` and which side is
-  right, SHACL engine behaviour on the shapes actually emitted, and any place where
-  a context that real deployments serve does not match the specification.
+  Record here what was observed rather than what the specification was expected to
+  imply. Full per-case reports are regenerated by the test run into
+  `docs/conformance/{expand,compact,differential}.md`; this section holds the
+  conclusions.
+
+  ### W3C JSON-LD 1.1 suite, as of change `add-jsonld-context-modeler`
+
+  Suite vendored from `w3c/json-ld-api` under
+  `packages/core/test/fixtures/w3c/`, run with the network off.
+
+    expand    336 of 376 attempted pass (9 skipped: 1.0 processing mode, or a
+              feature the milestone does not implement)
+    compact   166 of 235 attempted pass (11 skipped, same reasons)
+
+  Each suite has a ratchet constant in its test file. The ratchet exists so an
+  unexplained regression fails the build; raising it is a deliberate act that
+  accompanies a fix, never a way to make a red build green.
+
+  Known remaining expand gaps, by cause rather than by case:
+    - Several type-scoped context reversion cases still differ. The
+      `previousContext` mechanism is implemented, but the interaction between a
+      type-scoped context and a property-scoped context nested inside it is not
+      yet right (`tc012`, `tc019`, `tc024`, `tc028`).
+    - `@import` inside a scoped context is not resolved, because scoped contexts
+      deliberately do not follow remote references at definition time
+      (`tso05`, `tso06`).
+    - Protected-term override via `@protected: false` in a later context is not
+      implemented (`tpr13`, `tpr25`).
+
+  Known remaining compact gaps: reverse-map key compaction under `@vocab`, and
+  index-map round-tripping where the index property is itself a term.
+
+  ### Divergences from `jsonld.js`
+
+  Measured over every positive expand case both implementations accept: 256 agree,
+  17 diverge. Each divergence was adjudicated against the suite's own expected
+  document, which is the authority.
+
+    This project is right, `jsonld.js` is wrong:
+      - `#t0038` Expanding blank node labels.
+      - `#tc037` Property-scoped contexts which are an alias of `@nest`. A scoped
+        context on a term whose `@id` is `@nest` must apply to the nested entries;
+        `jsonld.js` does not apply it.
+
+    `jsonld.js` is right, this project is wrong: the 14 cases listed under the
+    remaining gaps above. Each is a gap rather than a disagreement about the
+    specification.
+
+    Neither matches the expected document: `#tc038` (Bibframe example). Unresolved;
+    it exercises several scoped-context interactions at once and is not a useful
+    first case to chase.
+
+  ### Observations about the algorithms themselves
+
+    - A compact IRI must be tried against the declared prefixes *before* the
+      absolute-IRI test. `schema:name` satisfies both readings, and testing for an
+      absolute IRI first silently mints `schema:name` as its own scheme.
+    - `@vocab` must be IRI-expanded like any other value. `@vocab: "ex:ns/"` names a
+      prefix and `@vocab: ""` names the base; keeping either verbatim mints IRIs
+      nobody serves.
+    - A scoped context is processed against the context in force where the term is
+      *used*, not where it was defined. Using the defining context stops scoped
+      contexts layering on the intermediate contexts between the two.
+    - In compaction, array-ness is a property of the selected term, never of how
+      many values the source property carried — several values under one property
+      may select several different terms.
+    - A default `@language` applies to strings only; a number or boolean must still
+      compact to a scalar.
+    - In compaction, a candidate compact IRI that is already a defined term is
+      safe in an `@id` position and unsafe in a property position: there the term
+      may carry a coercion that does not apply to the value being compacted.
+
+  ### Emitters, as built
+
+    - An emitted `@context` must be loadable by an independent implementation,
+      and the capability matrix requires a comment at the lossy position. JSON has
+      no comments, so the artifact is JSON with `//` lines and the execution test
+      strips them before handing it to `jsonld.js`. The two requirements are in
+      genuine tension; this resolves it in favour of the artifact staying
+      readable in place, and pays for it by verifying the stripped form.
+    - `context-inline` was run against `jsonld.js` on every fixture example and
+      round-trips them; the flattening therefore loses nothing the referenced
+      form carries, which is what makes the downgrade purely about upstream
+      drift rather than about expressiveness.
+    - Import cannot invent a namespace, because a `@context` does not state one.
+      It is inferred from `@vocab`, then from the commonest declared prefix, and
+      the fallback is deliberately `https://example.invalid/ns#` so nobody ships
+      it by accident.
+    - Import then emit is semantically equal to the input but never byte-equal:
+      key order and shorthand forms are not preserved. Import-emit-import-emit
+      *is* byte-equal, and that is the property worth asserting.
+
+  ### Versioning and publishing, as built
+
+    - A version's identity cannot be the hash of its manifest. The artifacts name
+      the version they belong to, the manifest hashes those artifacts, and the
+      identity comes from the manifest - which does not converge, because writing
+      the id changes the bytes that determine it. Identity is therefore a hash
+      over the *inputs* (model, lockfile, examples); the manifest still hashes
+      every file and itself, for verification. This was found in implementation,
+      not in design, and the design decision was rewritten rather than worked
+      around.
+    - A clone has its origin's inputs and its own identity, so its artifacts are
+      the origin's with one header line retargeted. Copying them verbatim would
+      serve a file at the clone's path claiming to be the origin.
+    - Host path constraints are a backstop, not the first line of defence: the
+      alias and project-model name patterns already refuse a leading underscore
+      and anything unsafe in a URL. The publish-time check is still worth having
+      because it is the only thing that would catch a loosened name pattern.
+    - GitHub Pages needs `.nojekyll` at the tree root, because Jekyll silently
+      drops any path segment beginning with `_` or `.`. S3 needs every key to
+      carry an extension, because a bucket cannot infer an index document for an
+      arbitrary prefix. Both are declared by their adapters rather than assumed.
+    - Every adapter this build knows copies an artifact to its alias path rather
+      than writing a redirect. A redirect a host does not honour fails silently,
+      which is worse than a duplicated file that is a few kilobytes.
+    - Two code paths needed the self-published resolver chained in front of the
+      vendored one - creating a version, and checking a project. Both were found
+      by a fixture that referenced a sibling's published version, not by reading
+      the code.
+
+  ### Observations about the canvas
+
+    - A node inside an `@id` map is expanded before the map key reaches it, so it
+      looks like a blank node on the way through. The observation is retracted
+      when the container supplies the identifier; reporting it would be a false
+      positive exactly where a container is doing its job.
+    - "The model file is unparseable" must key off YAML parse errors, not off
+      whether resolution produced an IR. A model with an unknown prefix still has
+      a diagram worth drawing; a file mid-keystroke does not.
 
 rules:
   proposal:

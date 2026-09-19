@@ -1,0 +1,116 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+# One deployment at a time, and a push that lands mid-run supersedes rather than
+# queues: the newest commit is the one that should be live.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # GitHub Pages runs Jekyll unless told not to, and Jekyll drops every path
+      # beginning with an underscore. The site does not use one today, but the
+      # marker is cheap and its absence is the classic silent-404 on this host.
+      - name: Require .nojekyll
+        run: test -f site/.nojekyll
+
+      # Every relative href and src in the site must resolve to a file that is
+      # actually committed. A broken relative path is invisible locally when the
+      # file is opened directly, and a 404 once served from a subdirectory.
+      - name: Resolve every internal link
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys, urllib.parse
+
+          root = pathlib.Path('site')
+          pattern = re.compile(r'(?:href|src)="([^"]+)"')
+          broken = []
+
+          for page in sorted(root.rglob('*.html')):
+              for raw in pattern.findall(page.read_text()):
+                  if raw.startswith(('http://', 'https://', 'mailto:', '#', 'data:')):
+                      continue
+                  target = urllib.parse.urlparse(raw).path
+                  if not target:
+                      continue
+                  resolved = (page.parent / target).resolve()
+                  if target.endswith('/'):
+                      resolved = resolved / 'index.html'
+                  if not resolved.exists():
+                      broken.append(f'{page}: {raw}')
+
+          if broken:
+              print('\n'.join(broken))
+              sys.exit(1)
+          print('all internal links resolve')
+          PY
+
+      # The Datenschutzerklaerung states that this site loads nothing from a
+      # third party. That is only true while it is true, so it is asserted
+      # rather than trusted: any subresource the browser fetches on its own --
+      # stylesheet, script, image, font, iframe -- must be same-origin. A plain
+      # <a href> is a navigation the reader chose and does not count.
+      - name: Fetch nothing from a third party
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+
+          pattern = re.compile(
+              r'<(?:link|script|img|iframe|source|embed|object|video|audio)\b[^>]*?'
+              r'(?:src|href|data)="([^"]+)"', re.I)
+          offenders = []
+
+          for page in sorted(pathlib.Path('site').rglob('*.html')):
+              for url in pattern.findall(page.read_text()):
+                  if re.match(r'https?://|//', url):
+                      offenders.append(f'{page}: {url}')
+
+          if offenders:
+              print('Third-party subresources found. The privacy statement says '
+                    'there are none:')
+              print('\n'.join('  ' + o for o in offenders))
+              sys.exit(1)
+          print('every subresource is same-origin')
+          PY
+
+      # Reachable in one click from every page, which is what the Impressum
+      # obligation under § 5 DDG comes down to in practice.
+      - name: Every page links to the legal pages
+        run: |
+          missing=0
+          for page in $(find site -name '*.html'); do
+            for legal in impressum datenschutz agb; do
+              grep -q "$legal.html" "$page" || { echo "$page is missing $legal.html"; missing=1; }
+            done
+          done
+          test "$missing" -eq 0
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

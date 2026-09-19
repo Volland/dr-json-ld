@@ -1,0 +1,29 @@
+# A JSON-LD Modeler model. This file is *about* JSON-LD; it is not itself JSON-LD.
+# The @context is generated from it — see `ldm emit`.
+
+jsonld: "1"
+
+# The prefix and base IRI that give this model's own terms their global identity.
+# Identity is the IRI, never the file path.
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+# Which JSON-LD processing mode this model targets. A 1.0 processor does not
+# reject a 1.1 context; it reads it differently. Declaring the target is what
+# lets a 1.1-only facet become a downgrade at its own site.
+mode: "1.1"
+
+# Contexts this model builds on but does not own. Run `ldm vendor` to fetch each
+# one into the committed vendor directory and record its hash here.
+uses: []
+
+# Terms are a flat map from JSON key to definition. One entry for `name` governs
+# every occurrence of `name` anywhere in the document.
+terms:
+  name:
+    id: a1b2c3
+    "@id": ex:name
+    note: The display name of the thing.
+
+examples: []
