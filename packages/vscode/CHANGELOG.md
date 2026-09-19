@@ -8,15 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added — projects, versions and publishing
 
-**Getting started.** `ldm init` writes a project and its first model; `ldm init
-model <name>` adds another and registers it in the project file, as a splice that
-leaves the file's comments and ordering intact. The extension contributes the
-same two as **New Project** and **New Model**. Both surfaces share one pair of
-scaffolds in core, so they write the same bytes. Neither overwrites an existing
-model: doing so would destroy its element ids. A scaffolded model keeps its
-placeholder namespace unless `--prefix` and `--base` say otherwise, and both
-surfaces say so — a placeholder IRI resolves, validates and emits exactly as a
-real one does, so nothing later can catch it.
+**Getting started.** **New Project** writes an `ldm.project.yaml` and its first
+model. **New Model** now places the model beside the ones the enclosing project
+declares and registers it there, as an edit that leaves the file's comments and
+ordering intact. Both share their scaffolds with `ldm init`, so the editor and
+the CLI write the same bytes. Neither overwrites an existing model, and both say
+when a model is left carrying the placeholder namespace.
 
 **Projects.** An `ldm.project.yaml` names the models that belong together, where
 published output goes, and which hosts it must serve from. Commands find it by

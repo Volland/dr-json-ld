@@ -6,3 +6,6 @@ dist
 *.tsbuildinfo
 .omc
 .gstack/
+
+# Built extension packages.
+*.vsix

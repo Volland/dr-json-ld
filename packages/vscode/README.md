@@ -60,9 +60,14 @@ tooling. No language server to install.
 
 ## Getting started
 
-1. **JSON-LD Modeler: New Model** — writes a scaffold with the ids already in it.
-2. Open the canvas: **JSON-LD Modeler: Open Canvas**.
-3. Add terms from the canvas, or type in the file. Both panes follow the file.
+1. **JSON-LD Modeler: New Project** — writes an `ldm.project.yaml` and its first
+   model. Or **JSON-LD Modeler: New Model** for a model on its own; in a folder
+   that already has a project, it registers the model there for you.
+2. Set the namespace. A new model carries a placeholder — `ex` at
+   `https://example.org/ns#` — and nothing later will flag it, because a
+   placeholder IRI resolves, validates and emits exactly as a real one does.
+3. Open the canvas: **JSON-LD Modeler: Open Canvas**.
+4. Add terms from the canvas, or type in the file. Both panes follow the file.
 
 ```yaml
 jsonld: "1"

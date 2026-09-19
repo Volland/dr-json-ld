@@ -162,6 +162,25 @@ export {
   type ProjectModel,
 } from './project/project.js'
 export {
+  baseProblem,
+  baseUrlProblem,
+  hasPlaceholderNamespace,
+  MODEL_SCAFFOLD,
+  modelScaffold,
+  nameProblem,
+  PLACEHOLDER_BASE,
+  PLACEHOLDER_PREFIX,
+  prefixProblem,
+  projectScaffold,
+  registerModel,
+  ScaffoldError,
+  SCAFFOLD_NAME_PATTERN,
+  type ModelScaffoldOptions,
+  type ProjectScaffoldOptions,
+  type RegisterModelResult,
+  type ScaffoldedModel,
+} from './project/scaffold.js'
+export {
   checkProject,
   crossProjectFindings,
   modelForFinding,

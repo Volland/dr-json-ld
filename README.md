@@ -51,6 +51,20 @@ The extension is `pavlyshyn.jsonld-modeler` on the Marketplace.
 
 ## Use
 
+Start from nothing:
+
+```bash
+ldm init                                       # a project and its first model
+ldm init model core                            # one more, registered in the project
+ldm init --prefix cat --base https://example.org/catalogue#   # with a real namespace
+```
+
+A scaffolded model carries a placeholder namespace unless you pass one, and both
+`ldm init` and the extension say so. Nothing downstream will: `ex:name` resolves,
+validates and emits exactly as a real IRI does.
+
+Or start from a context you already have:
+
 ```bash
 ldm import schema-subset.jsonld --out vocabulary.jsonld.yaml   # bring your own context
 ldm vendor vocabulary.jsonld.yaml                              # the one command that fetches

@@ -32,6 +32,17 @@ const coreBoundary = {
   },
 }
 
+/**
+ * Build scripts run in Node rather than in the extension host or a webview, so
+ * they get Node's globals. Kept narrow: only the scripts, not the sources.
+ */
+const buildScripts = {
+  files: ['**/build.mjs', '*.config.js', '*.config.ts'],
+  languageOptions: {
+    globals: { process: 'readonly', console: 'readonly', __dirname: 'readonly' },
+  },
+}
+
 export default tseslint.config(
   { ignores: ['**/dist/**', '**/node_modules/**', 'lpg-modeler/**', '**/fixtures/w3c/**'] },
   js.configs.recommended,
@@ -46,4 +57,5 @@ export default tseslint.config(
     },
   },
   coreBoundary,
+  buildScripts,
 )

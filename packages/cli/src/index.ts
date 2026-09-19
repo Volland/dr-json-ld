@@ -17,6 +17,7 @@ import {
   UsageError,
   type Io,
 } from './io.js'
+import { initCommand } from './init.js'
 import {
   alias,
   checkProjectCommand,
@@ -53,6 +54,11 @@ import {
 export { EXIT_FINDINGS, EXIT_OK, EXIT_USAGE, nodeIo, UsageError, type Io } from './io.js'
 
 export const USAGE = `ldm — author JSON-LD contexts as a reviewable YAML model.
+
+Starting out:
+  ldm init [--name <project>] [--model <name>] [--prefix <p>] [--base <iri>]
+           [--base-url <iri>] [--host plain,github-pages,s3]
+  ldm init model <name> [--prefix <p>] [--base <iri>] [--out <path>]
 
 One model:
   ldm check <model> [--level L0|L1|L2] [--json]
@@ -114,9 +120,24 @@ export function parseArgv(argv: readonly string[]): Parsed {
   return { command: command ?? '', positional, flags }
 }
 
-const TAKES_VALUE = new Set(['level', 'target', 'out', 'project', 'alias', 'after', 'fail-on'])
+const TAKES_VALUE = new Set([
+  'level',
+  'target',
+  'out',
+  'project',
+  'alias',
+  'after',
+  'fail-on',
+  'name',
+  'model',
+  'prefix',
+  'base',
+  'base-url',
+  'host',
+])
 
 const COMMANDS = new Set([
+  'init',
   'check',
   'emit',
   'import',
@@ -156,6 +177,8 @@ export async function run(argv: readonly string[], io: Io = nodeIo): Promise<num
     const context = { positional: parsed.positional, flags: parsed.flags, io }
 
     switch (parsed.command) {
+      case 'init':
+        return initCommand(context)
       case 'check':
         // `--project` always means the project. With no model path, the project
         // is used only if there actually is one — otherwise the old error, which

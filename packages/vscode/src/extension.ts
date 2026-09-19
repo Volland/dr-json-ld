@@ -12,6 +12,14 @@ import * as vscode from 'vscode'
 
 import {
   backfillElementIds,
+  findProjectFile,
+  modelScaffold,
+  nameProblem,
+  PLACEHOLDER_BASE,
+  PLACEHOLDER_PREFIX,
+  PROJECT_FILE,
+  projectScaffold,
+  registerModel,
   resolveModelText,
   resolverFor,
   SourceIndex,
@@ -36,6 +44,8 @@ import { releaseStateFor } from './release-state.js'
 import { SCAFFOLD } from './scaffold.js'
 
 const MODEL_SUFFIX = '.jsonld.yaml'
+/** Where a project's models go, matching what `ldm init` writes. */
+const MODELS_DIR = 'models'
 const DIAGNOSTIC_SOURCE = 'jsonld-modeler'
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -56,6 +66,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     command('jsonldModeler.openCanvas', () => openCanvas(context, diagnostics)),
+    command('jsonldModeler.newProject', () => newProject()),
     command('jsonldModeler.newModel', () => newModel()),
     command('jsonldModeler.backfillIds', () => backfillIds()),
   )
@@ -184,6 +195,57 @@ function severityOf(finding: Finding): vscode.DiagnosticSeverity {
   }
 }
 
+/**
+ * The project half of getting started, matching `ldm init`.
+ *
+ * A project must declare at least one model, so this writes both files. It
+ * cannot write only the project file and leave the user to fill it in: that
+ * file would fail every command until they did.
+ *
+ * @lat: [[architecture#Architecture#Projects#Starting one]]
+ */
+async function newProject(): Promise<void> {
+  const folder = vscode.workspace.workspaceFolders?.[0]
+  if (!folder) throw new Error('open a folder before creating a project')
+
+  const projectUri = vscode.Uri.joinPath(folder.uri, PROJECT_FILE)
+  if (await exists(projectUri)) {
+    throw new Error(
+      `${PROJECT_FILE} already exists in this folder. Use "New Model" to add a model to it.`,
+    )
+  }
+
+  const name = await vscode.window.showInputBox({
+    title: 'New JSON-LD Modeler project',
+    prompt: 'Project name — it appears in the header of every artifact this project publishes',
+    value: basenameOf(folder.uri),
+    validateInput: (value) => nameProblem('project', value),
+  })
+  if (!name) return
+
+  const modelName = await vscode.window.showInputBox({
+    title: 'New JSON-LD Modeler project',
+    prompt: 'Name of its first model',
+    value: name,
+    validateInput: (value) => nameProblem('model', value),
+  })
+  if (!modelName) return
+
+  const declaredPath = `${MODELS_DIR}/${modelName}${MODEL_SUFFIX}`
+  const modelUri = vscode.Uri.joinPath(folder.uri, MODELS_DIR, `${modelName}${MODEL_SUFFIX}`)
+  if (await exists(modelUri)) throw new Error(`${declaredPath} already exists`)
+
+  await vscode.workspace.fs.writeFile(modelUri, Buffer.from(modelScaffold(), 'utf8'))
+  await vscode.workspace.fs.writeFile(
+    projectUri,
+    Buffer.from(projectScaffold({ name, models: [{ name: modelName, path: declaredPath }] }), 'utf8'),
+  )
+
+  const document = await vscode.workspace.openTextDocument(modelUri)
+  await vscode.window.showTextDocument(document)
+  void warnAboutPlaceholder(declaredPath)
+}
+
 async function newModel(): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0]
   if (!folder) throw new Error('open a folder before creating a model')
@@ -192,23 +254,61 @@ async function newModel(): Promise<void> {
     title: 'New JSON-LD model',
     prompt: 'File name, without the suffix',
     value: 'vocabulary',
-    validateInput: (value) =>
-      /^[A-Za-z0-9._-]+$/.test(value) ? undefined : 'use letters, digits, dot, dash or underscore',
+    validateInput: (value) => nameProblem('model', value),
   })
   if (!name) return
 
-  const uri = vscode.Uri.joinPath(folder.uri, `${name}${MODEL_SUFFIX}`)
-  try {
-    await vscode.workspace.fs.stat(uri)
-    throw new Error(`${name}${MODEL_SUFFIX} already exists`)
-  } catch (error) {
-    // `stat` throwing is the success path: the file does not exist yet.
-    if (error instanceof Error && error.message.includes('already exists')) throw error
-  }
+  // A model belongs to at most one project, and the project it belongs to is
+  // the one enclosing it. Writing it beside the models already declared there
+  // is what lets the registration below name a path that project can read.
+  const projectFile = findProjectFile(folder.uri.fsPath)
+  const uri = vscode.Uri.joinPath(
+    folder.uri,
+    ...(projectFile === undefined ? [] : [MODELS_DIR]),
+    `${name}${MODEL_SUFFIX}`,
+  )
+  if (await exists(uri)) throw new Error(`${name}${MODEL_SUFFIX} already exists`)
 
   await vscode.workspace.fs.writeFile(uri, Buffer.from(SCAFFOLD, 'utf8'))
+
+  if (projectFile !== undefined) {
+    const declaredPath = `${MODELS_DIR}/${name}${MODEL_SUFFIX}`
+    const projectUri = vscode.Uri.file(projectFile)
+    const text = Buffer.from(await vscode.workspace.fs.readFile(projectUri)).toString('utf8')
+    const updated = registerModel(text, projectFile, name, declaredPath)
+    if (updated.changed) {
+      await vscode.workspace.fs.writeFile(projectUri, Buffer.from(updated.text, 'utf8'))
+    }
+  }
+
   const document = await vscode.workspace.openTextDocument(uri)
   await vscode.window.showTextDocument(document)
+  void warnAboutPlaceholder(`${name}${MODEL_SUFFIX}`)
+}
+
+/**
+ * The scaffolded namespace is the one thing in a new model that is certainly
+ * wrong and that nothing later will flag: `ex:name` resolves, validates and
+ * emits exactly as a real IRI would.
+ */
+async function warnAboutPlaceholder(path: string): Promise<void> {
+  await vscode.window.showInformationMessage(
+    `JSON-LD Modeler: the namespace in ${path} is a placeholder — ${PLACEHOLDER_PREFIX} at ${PLACEHOLDER_BASE}. Identity is the IRI, never the file path, so set it before you publish.`,
+  )
+}
+
+async function exists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function basenameOf(uri: vscode.Uri): string {
+  const name = uri.path.split('/').filter(Boolean).pop() ?? ''
+  return nameProblem('project', name) === undefined ? name : ''
 }
 
 async function backfillIds(): Promise<void> {

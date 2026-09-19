@@ -12,6 +12,24 @@ A model still works alone: a command given a path and no project behaves exactly
 
 Views stay scoped to one model. A view spanning several would need a term to mean something outside the model that declares it, and [[metamodel#Terms]] is explicit that a term is global to a *context*, not to a repository.
 
+### Starting one
+
+`ldm init` writes a project and its first model; `ldm init model <name>` adds another and registers it. The extension contributes the same two as **New Project** and **New Model**.
+
+Both files come from [[packages/core/src/project/scaffold.ts#projectScaffold|one pair of scaffolds]] in core, so the editor and the CLI write the same bytes. Duplicating them would let the first file a user creates behave differently in continuous integration than it did on their machine — the worst possible moment for that to be true.
+
+`ldm init` writes both files rather than only the project, because the project schema requires at least one model. A project file on its own would fail every command run against it, so a command that produced one would be handing the user a broken state and calling it a start.
+
+Registering a model is a splice, for the reason [[architecture#Editing Surface#Targeted edits]] gives generally: re-serialising the project file would discard the comments the scaffold wrote and turn a one-line addition into a whole-file diff. A model is placed beside the ones the project already declares, so the layout a project chose is the layout it keeps.
+
+#### Placeholder namespaces
+
+A scaffolded model carries `ex` at `https://example.org/ns#` unless the caller passes `--prefix` and `--base`, and both surfaces say so out loud when it does.
+
+Nothing downstream can catch it. A placeholder IRI resolves, validates and emits exactly as a real one does, so creation is the only moment at which the tool can point at it. Deriving the IRI from the directory name instead would be worse: [[metamodel#Identity]] is explicit that identity is the IRI and never the file path, and a guessed IRI is a claim about what the data means.
+
+Neither command overwrites. Rewriting a model that is already there would destroy its [[metamodel#Stable Element IDs|element ids]], which are the one thing in the file that cannot be reconstructed by reading it.
+
 ## Versions and the Published Tree
 
 A version is an immutable, content-addressed snapshot of a model: the model as written, the [[emitters#Change Management#Lockfile|lockfile]], the examples, and the emitted artifacts, under a manifest that hashes every file and then hashes itself.
@@ -151,6 +169,10 @@ Keeping payloads out of the model file is a readability decision: a realistic do
 The extension ships to the Marketplace as `pavlyshyn.jsonld-modeler`; the CLI is `ldm` on npm. The CLI is what a pull request runs.
 
 `ldm` rather than `jsonld`, because `jsonld.js` already publishes a `jsonld` binary and a name collision in a tool whose credibility rests on being the careful one about JSON-LD would be a poor first impression. The extension bundle inlines core so that it is self-contained.
+
+`tsc` is the typechecker, not the packager. It emits ESM with a bare import of `@jsonld-modeler/core`, and the extension host loads CommonJS and has no way to resolve a workspace package, so the shipped artifact is produced by `packages/vscode/build.mjs`: one CommonJS bundle with core inlined, and one self-contained IIFE for the canvas. A webview is a sandboxed iframe with no module loader, so the canvas cannot be anything else.
+
+`vsce` therefore runs with `--no-dependencies`, and `.vscodeignore` keeps the tsc output, the sources and the build tooling out of the `.vsix`. What ships is the two bundles, the icon, the two JSON Schemas and the three documents the Marketplace renders.
 
 The Marketplace icon must be a PNG, so the artwork in `packages/vscode/media/` is authored as SVG and rasterized from it. The mark draws its letterforms as paths rather than setting them as text, because a logo that depended on a font being installed would render differently on whichever machine happened to build it.
 

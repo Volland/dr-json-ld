@@ -38,9 +38,11 @@
     "Programming Languages",
     "Visualization"
   ],
-  "main": "./dist/extension.js",
+  "main": "./dist/extension.cjs",
   "scripts": {
-    "build": "tsc --build"
+    "build": "tsc --build && node build.mjs",
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish --no-dependencies"
   },
   "activationEvents": [
     "onLanguage:yaml"
@@ -72,6 +74,10 @@
         "title": "JSON-LD Modeler: Open Canvas"
       },
       {
+        "command": "jsonldModeler.newProject",
+        "title": "JSON-LD Modeler: New Project"
+      },
+      {
         "command": "jsonldModeler.newModel",
         "title": "JSON-LD Modeler: New Model"
       },
@@ -81,9 +87,6 @@
       }
     ]
   },
-  "dependencies": {
-    "@jsonld-modeler/core": "0.1.0"
-  },
   "devDependencies": {
     "@types/vscode": "^1.90.0",
     "@xyflow/react": "^12.3.0",
@@ -91,6 +94,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0"
+    "@types/react-dom": "^18.3.0",
+    "@jsonld-modeler/core": "0.1.0"
   }
 }

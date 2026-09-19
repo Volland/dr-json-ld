@@ -1,0 +1,28 @@
+# Everything that is not the shipped artifact. The bundle in dist/extension.cjs
+# already inlines core, and dist/webview/ is the canvas, so the TypeScript
+# sources, the tsc ESM output they produce, and the build tooling are all dead
+# weight in the .vsix.
+
+src/**
+test/**
+webview/**
+build.mjs
+tsconfig.json
+tsconfig.tsbuildinfo
+.omc/**
+
+# tsc emits ESM beside the bundle for typechecking and declarations. The host
+# loads dist/extension.cjs and nothing else, so none of it ships.
+dist/*.js
+dist/*.js.map
+dist/*.d.ts
+dist/*.d.ts.map
+dist/host/**
+dist/intents/**
+dist/**/*.map
+
+# Logo variants and the artwork note are for contributors, not for users. The
+# Marketplace icon is media/icon.png.
+media/*.svg
+media/icon-128.png
+media/README.md
