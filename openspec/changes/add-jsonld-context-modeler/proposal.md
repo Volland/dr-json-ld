@@ -2,7 +2,7 @@
 
 Nothing exists yet. This is milestone 1: the thin vertical slice that exercises every architectural seam once, so the expensive decisions are tested before anything is built on them.
 
-A layered build was rejected. `lpg-modeler` recorded that shipping a compiler first would have left it unusable for its stated purpose until a second release, and pulled visual authoring forward (`lat.md/architecture#Architecture#Roadmap`). That holds with more force here: the differentiating feature is visual, and the riskiest component — a JSON-LD processor written in this project — is justified only by what the visual and validation surfaces do with its output.
+A layered build was rejected. `lpg-modeler` recorded that shipping a compiler first would have left it unusable until a second release, and pulled visual authoring forward (`lat.md/architecture#Architecture#Roadmap`). That holds harder here: the differentiator is visual, and the riskiest component — a JSON-LD processor written in this project — is justified only by what the visual and validation surfaces do with its output.
 
 ## What Changes
 
@@ -25,19 +25,19 @@ A layered build was rejected. `lpg-modeler` recorded that shipping a compiler fi
 
 ## Locked decisions
 
-Touches none. It is the first implementation of decisions 1–18. It settles no recorded open question except one it cannot avoid: whether the two panes share a layout sidecar, which the canvas work must decide.
+Touches none; it is the first implementation of decisions 1–18. It settles one open question it cannot avoid: whether the two panes share a layout sidecar.
 
 ## Capabilities
 
 ### New Capabilities
 
 - `model-format`: what a model may declare and how it resolves into the IR.
-- `context-resolution`: vendoring, pinning, and the offline guarantee.
+- `context-resolution`: vendoring, pinning, the offline guarantee.
 - `jsonld-processing`: expansion, compaction, source mapping, trace, conformance.
 - `document-validation`: the L0–L2 ladder and what a finding carries.
 - `context-generation`: the `context` and `context-inline` targets.
 - `context-import`: bootstrapping a model from an existing context.
-- `visual-modeling`: the two panes, views, the sidecar, and targeted edits.
+- `visual-modeling`: the two panes, views, the sidecar, targeted edits.
 
 ### Modified Capabilities
 
@@ -45,7 +45,6 @@ None — this is the first change.
 
 ## Impact
 
-- New repository: `packages/core`, `packages/cli`, `packages/vscode`. No `vscode` import in `core`.
-- New dependencies: `yaml`, `jsonld` (test oracle only), `@xyflow/react`, `elkjs`, `vitest`.
-- The W3C JSON-LD 1.1 test suite is vendored as a test fixture.
-- `lat.md/`: all five documents already describe this change and are updated as it lands.
+- New repository: `core`, `cli`, `vscode`. No `vscode` import in `core`.
+- Dependencies: `yaml`, `jsonld` (test oracle), `@xyflow/react`, `elkjs`, `vitest`; the W3C suite vendored as a fixture.
+- `lat.md/`: all five documents describe this change and are updated as it lands.
