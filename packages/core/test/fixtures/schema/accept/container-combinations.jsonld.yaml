@@ -1,0 +1,19 @@
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  # A single container is always legal, whichever one it is.
+  plain: { "@id": "ex:a", "@container": "@list" }
+  indexed: { "@id": "ex:b", "@container": "@index" }
+  # @set pairs with any one other container.
+  setIndex: { "@id": "ex:c", "@container": ["@set", "@index"] }
+  setLanguage: { "@id": "ex:d", "@container": ["@language", "@set"] }
+  setType: { "@id": "ex:e", "@container": ["@type", "@set"] }
+  # @graph is the one container that pairs with a second.
+  graphId: { "@id": "ex:f", "@container": ["@graph", "@id"] }
+  graphIndexSet: { "@id": "ex:g", "@container": ["@graph", "@index", "@set"] }
+  graphSet: { "@id": "ex:h", "@container": ["@graph", "@set"] }
+  nulled: { "@id": "ex:i", "@container": null }

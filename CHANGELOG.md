@@ -4,6 +4,32 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — a page for each published package
+
+`@json-ld-modeler/ldm` and `@json-ld-modeler/core` each carry a README, a copy of
+the licence, and the npm metadata that was missing: description, keywords,
+repository directory, homepage and issue tracker. The CLI page is written for
+someone choosing a tool — install, a real `ldm check` transcript, the command
+table, a continuous-integration snippet and the exit codes. The core page is
+written for someone building on the library — runnable examples for expansion
+with observations, validation, tracing and emit, and a map of what the package
+exports. Both link the site, the handbook, the essays and the extension.
+
+### Fixed — the install line named the wrong package
+
+The site and the extension README said `npm install -g ldm`, which installs an
+unrelated log viewer: the bare name was taken, which is why the package is
+scoped. Every install line and npm link outside this repository now names
+`@json-ld-modeler/ldm`.
+
+### Added — a fourth essay
+
+*The format an agent and a human can share* joins the notes: why the interaction
+layer rather than the graph model is the hard part, what expansion buys, what an
+agent needs at a data boundary, and where JSON-LD-native storage stands.
+
 ## [0.2.0] — 2026-09-19
 
 ### Added — getting started

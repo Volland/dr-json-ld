@@ -1,0 +1,11 @@
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  # @reverse carries @set and @index, and a scoped context.
+  parentOf: { "@reverse": "ex:childOf", "@container": "@set" }
+  indexedReverse: { "@reverse": "ex:tagOf", "@container": ["@index", "@set"] }
+  bareReverse: { "@reverse": "ex:memberOf" }

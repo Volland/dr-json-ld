@@ -29,6 +29,49 @@ jobs:
       - name: Require .nojekyll
         run: test -f site/.nojekyll
 
+      # `site/` has no generator, so the schema reference page is generated into
+      # the repository and checked here rather than built at deploy time. A page
+      # built during deployment is a page nobody reviewed, and this one makes
+      # factual claims about the schema's fields.
+      - name: The schema reference page matches the schema
+        run: node scripts/schema-reference.mjs --check
+
+      # A JSON Schema's $id is its identity, and a schema served at a URL other
+      # than the one it claims is worse than an unpublished one: it resolves,
+      # it validates, and every $ref inside it resolves against the wrong base.
+      # Nothing else here would catch a moved directory, because a schema is not
+      # an HTML page and the link checker never opens one.
+      - name: Every schema is served at the URL its $id names
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+
+          SITE = 'https://volland.github.io/dr-json-ld'
+          root = pathlib.Path('site')
+          wrong = []
+
+          found = sorted(root.glob('schemas/**/*.schema.json'))
+          if not found:
+              print('no schemas under site/schemas/')
+              sys.exit(1)
+
+          for path in found:
+              try:
+                  schema = json.loads(path.read_text())
+              except json.JSONDecodeError as error:
+                  wrong.append(f'{path}: does not parse -- {error}')
+                  continue
+              served = f'{SITE}/{path.relative_to(root).as_posix()}'
+              if schema.get('$id') != served:
+                  wrong.append(f'{path}:\n    $id    {schema.get("$id")!r}\n    served {served!r}')
+
+          if wrong:
+              print('A schema must be served at the URL its $id names:')
+              print('\n'.join('  ' + w for w in wrong))
+              sys.exit(1)
+          print(f'{len(found)} schema(s) served at their own $id')
+          PY
+
       # Every relative href and src in the site must resolve to a file that is
       # actually committed. A broken relative path is invisible locally when the
       # file is opened directly, and a 404 once served from a subdirectory.

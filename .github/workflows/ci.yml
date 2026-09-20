@@ -60,6 +60,15 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+      # The schema now exists in three places, and only one of them is watched
+      # by the Pages workflow — which fires on `site/**`. A schema edited in
+      # `core` and not mirrored into `site/` therefore deploys nothing, changes
+      # nothing, and leaves the published URL quietly serving the old rules. So
+      # the identity of the three copies is asserted here, on every push, and
+      # not only where the site is built.
+      - name: The schema is identical in all three copies
+        run: npx vitest run packages/core/test/schema-copies.test.ts
+
       # The vendored contexts must match the hashes the models record. This is
       # the continuous-integration form of `ldm vendor`, and it fetches nothing.
       - name: Verify vendored contexts
@@ -80,6 +89,40 @@ jobs:
             node packages/cli/dist/bin.js check "$model"
             node packages/cli/dist/bin.js emit "$model" --target context --out /tmp/emit
             node packages/cli/dist/bin.js emit "$model" --target context-inline --out /tmp/emit
+          done
+
+      # The skills ship inside the package, so installing them fetches nothing.
+      # Asserted rather than stated: this runs in the job where outbound traffic
+      # is already dropped, so a `skill` verb that grew a download would fail
+      # here instead of working quietly on a developer's machine.
+      - name: Installing skills reaches no network
+        run: |
+          node packages/cli/dist/bin.js skill list
+          node packages/cli/dist/bin.js skill install --user
+          test -f "$HOME/.claude/skills/jsonld-design/SKILL.md"
+
+      # Every model the schema corpus says is illegal must also make the real
+      # binary exit non-zero. The corpus proves the schema refuses them, which
+      # is what an editor does; this proves `ldm check` refuses them too, which
+      # is what a pull request does. A constraint only one of the two enforces
+      # is the disagreement the corpus exists to prevent.
+      - name: Every rejected model fails the command
+        run: |
+          for model in packages/core/test/fixtures/schema/reject/*.jsonld.yaml; do
+            if node packages/cli/dist/bin.js check "$model" > /dev/null 2>&1; then
+              echo "$model is in the reject corpus but \`ldm check\` accepted it"
+              exit 1
+            fi
+          done
+          echo "every rejected model fails the command"
+
+      # …and every model it says is legal must pass, at the level a pull
+      # request runs. An over-strict constraint is the failure nobody writes a
+      # test for, because nobody writes a case for what they never tried.
+      - name: Every accepted model passes the command
+        run: |
+          for model in packages/core/test/fixtures/schema/accept/*.jsonld.yaml; do
+            node packages/cli/dist/bin.js check "$model"
           done
 
       # The emitted context must be regenerable: a hand edit to a generated

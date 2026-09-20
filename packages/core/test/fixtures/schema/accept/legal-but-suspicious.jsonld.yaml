@@ -1,0 +1,28 @@
+# Two combinations that look like mistakes and are not. The schema's reach is
+# bounded by what makes `ldm check` exit non-zero, so neither is refused here.
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+mode: "1.0"
+
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+
+terms:
+  # @language beside a @type coercion: JSON-LD reads @language only when @type
+  # is absent, so the language is ignored rather than refused.
+  count:
+    "@id": ex:count
+    "@type": xsd:integer
+    "@language": en
+
+  # A 1.1 facet in a model targeting 1.0. Per locked decision 5 this is a
+  # downgrade reported as L1.facet-not-in-mode at warning severity, and a
+  # warning names a model the tool accepts.
+  label:
+    "@id": ex:label
+    "@protected": true
+    "@nest": meta

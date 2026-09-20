@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The format an agent and a human can share — Dr. JSON-LD</title>
+<meta name="description" content="Graphs are not hard; the interaction layer is. JSON-LD is the one serialization a person can edit and an agent can merge — and expansion is the hinge between the two.">
+<link rel="icon" href="../assets/img/mark.svg">
+<link rel="stylesheet" href="../assets/fonts.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="brand" href="../">
+      <img src="../assets/img/mark.svg" alt="">
+      <span>Dr. JSON-LD<small>apothecary for linked data</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="../">The tool</a>
+      <a href="../book/">Handbook</a>
+      <a href="./" aria-current="page">Notes</a>
+      <a href="https://github.com/Volland/dr-json-ld">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <article class="prose prose--wide">
+
+    <p class="post-meta"><span>2026-09-19</span><span>13 min</span><span>Agents</span></p>
+    <h1 style="font-size:clamp(1.9rem,4vw,2.7rem);line-height:1.12;margin:0 0 1.5rem;font-weight:600">
+      The format an agent and a human can share
+    </h1>
+
+    <p class="lede">
+      Graphs have a reputation for being difficult, and it is undeserved. The model is
+      three words long: nodes, edges, properties. What is actually difficult is the
+      interaction layer — the thing a person opens in an editor and the thing an agent
+      pastes into a prompt are not the same artifact, and for twenty years we have been
+      asked to choose which one to optimise for. JSON-LD is the answer to that, and it has
+      been running in production under a different name for the better part of a decade.
+    </p>
+
+    <h2>The model is easy; the surface is not</h2>
+
+    <p>
+      Nobody has ever been confused by the idea that Ada wrote a paper and the paper cites
+      another paper. Drawn on a whiteboard it takes four seconds and no training. The
+      trouble starts the moment that drawing has to become bytes, because three different
+      readers turn up and each of them wants something different.
+    </p>
+
+    <p>
+      A <strong>person</strong> wants a document they can scan and edit: short keys, nesting
+      that groups related things, no ceremony around values that are obviously strings. A
+      <strong>developer</strong> wants a stable shape to index into, because they are writing
+      <code>response.author.name</code> and they need that to keep working. A
+      <strong>machine</strong> — an LLM, a reasoner, a graph neural network, a verifier —
+      wants unambiguous identity: not the key <code>name</code>, which means whatever the
+      surrounding document says it means, but an absolute IRI that means the same thing in
+      every document that has ever been written.
+    </p>
+
+    <p>
+      Every serious data format picks one of those three and makes the others somebody
+      else's problem. Turtle and N-Quads serve the machine and are unreadable to everyone
+      else. Plain JSON serves the person and the developer, and leaves the machine guessing
+      what <code>name</code> was supposed to mean. The interesting property of JSON-LD is
+      not that it is a graph format. It is that it refuses the choice.
+    </p>
+
+    <h2>Verifiable credentials were the working proof</h2>
+
+    <p>
+      I spent seven years in self-sovereign identity before it occurred to me that we had
+      already solved this and had not noticed. A verifiable credential is a JSON document.
+      It has an issuer, a subject, a few claims, and a signature. Wallet developers read
+      them, support staff read them, and — this is the part that matters — nobody ever had
+      to explain RDF to the holder of a diploma in order for the diploma to work.
+    </p>
+
+    <p>
+      Underneath, that same document is a graph. The signature does not cover the bytes; it
+      covers the canonical form of the triples the bytes denote, which is why two credentials
+      with their keys in a different order verify identically. The whole ecosystem — millions
+      of credentials, several government deployments, a W3C recommendation — runs on the
+      premise that one artifact can be a readable document and a signable graph at the same
+      time, and it works. The premise is load-bearing and it has been load-bearing for years.
+    </p>
+
+    <p class="margin-note">
+      This is also why credentials are unforgiving about context resolution, and why
+      everything difficult about them lives there. That argument is
+      <a href="verifiable-credentials.html">its own essay</a>.
+    </p>
+
+    <p>
+      What changed recently is that a second population of readers showed up. Agents want
+      exactly what a verifier wants: stable identity, no ambiguity, and a merge that does
+      not require a human to write a mapping first. The infrastructure was already built.
+      It was built for credentials.
+    </p>
+
+    <h2>Expansion is the hinge</h2>
+
+    <p>
+      The mechanism that makes the double reading possible is a pair of algorithms:
+      expansion and its inverse, compaction. They are worth understanding properly, because
+      almost every confusion about JSON-LD dissolves once you can say which form you are
+      looking at.
+    </p>
+
+    <p>
+      <strong>Expansion</strong> takes a document and its context and resolves every key
+      into an absolute IRI, every value into an explicit value object, and every singular
+      into an array. The result is verbose, regular, and completely independent of the
+      context that produced it — you can throw the <code>@context</code> away afterwards
+      and lose nothing.
+    </p>
+
+<pre><code>{
+  <span class="t-key">"@context"</span>: <span class="t-str">"https://schema.org/"</span>,
+  <span class="t-key">"@id"</span>: <span class="t-str">"https://example.org/ada"</span>,
+  <span class="t-key">"name"</span>: <span class="t-str">"Ada Lovelace"</span>,
+  <span class="t-key">"knows"</span>: { <span class="t-key">"@id"</span>: <span class="t-str">"https://example.org/charles"</span> }
+}
+
+<span class="t-com">// expands to</span>
+
+{
+  <span class="t-key">"@id"</span>: <span class="t-str">"https://example.org/ada"</span>,
+  <span class="t-key">"https://schema.org/name"</span>: [ { <span class="t-key">"@value"</span>: <span class="t-str">"Ada Lovelace"</span> } ],
+  <span class="t-key">"https://schema.org/knows"</span>: [ { <span class="t-key">"@id"</span>: <span class="t-str">"https://example.org/charles"</span> } ]
+}</code></pre>
+
+    <p>
+      <strong>Compaction</strong> runs the other way: apply a context to an expanded
+      document and get back idiomatic JSON, with the short keys and the nesting a person
+      wanted. The round trip is not byte-identical — compaction has genuine freedom about
+      whether a single value appears as a scalar or a one-element array — but the graph is
+      preserved exactly, and that is the invariant the whole design rests on.
+    </p>
+
+    <p>
+      Two properties of expansion deserve to be said out loud, because neither is obvious
+      and both bite.
+    </p>
+
+    <p>
+      The first is that expansion is <strong>total</strong>. It never fails. A key that the
+      context does not map is not an error — it is silently dropped, and the processor
+      returns success. A document can lose most of its content on the way in while every
+      tool in the pipeline reports that everything is fine. This is the single most common
+      way a JSON-LD integration is quietly broken for months, and it is the reason the
+      validator in this tool treats dropped keys as a first-class finding rather than a
+      diagnostic footnote.
+    </p>
+
+    <p class="margin-note">
+      Lossiness is a design choice, not a bug: it is what lets an unknown extension key
+      ride along in a document without breaking a processor that has never heard of it. The
+      cost is that silence means two different things and you cannot tell which.
+    </p>
+
+    <p>
+      The second is that expansion is <strong>deterministic</strong>, which is what makes
+      everything downstream possible. Canonicalize the expanded graph (URDNA2015) and you
+      have something you can hash, sign, diff, or use as a cache key. Convert it to N-Quads
+      and you have something you can load into any triple store on earth. Those operations
+      are not available on the document you typed. They are available on what it expands to.
+    </p>
+
+    <h2>What an agent actually needs</h2>
+
+    <p>
+      The naive version of "JSON-LD is good for agents" is that you hand the model expanded
+      form and everything is now unambiguous. In practice that is a bad default: expanded
+      form triples your token count, and language models read short keys more accurately
+      than they read forty-character IRIs. Precision at the cost of comprehension is not a
+      trade you want to make inside a context window.
+    </p>
+
+    <p>
+      The trade that does work is to separate the two jobs. Give the model the
+      <strong>compacted document</strong> to read and reason about, and give it the
+      <strong>term table</strong> — the resolved mapping of short key to IRI, which is what
+      the context <em>is</em> — as a small, flat block alongside. That is a handful of lines,
+      it is stable across every document in your system, and it converts every key the model
+      emits back into an identity you can act on. Reserve full expansion for the boundary:
+      the point where data is stored, merged, signed, or compared.
+    </p>
+
+    <p>
+      The failure this avoids is specific and I have watched it happen repeatedly. An agent
+      reads a tool result containing <code>"name"</code>, reasons about it correctly, and
+      writes its conclusion back using <code>"title"</code>, because nothing in the payload
+      told it there was a canonical spelling. A second tool returns a record about the same
+      person under a different key set and a different local identifier. Now you have three
+      partial descriptions of one entity, no way to merge them automatically, and a
+      hand-written reconciliation step that grows a branch every sprint.
+    </p>
+
+    <p>
+      With IRIs, the merge is not a feature you build. It is set union. Two documents from
+      two unrelated tools that both say something about
+      <code>https://example.org/ada</code> combine without a mapping, because the identity
+      is global and the predicate is global. This is the one genuine superpower RDF has over
+      every property graph, and it is precisely the property that matters when your data is
+      arriving from a dozen tool calls, three MCP servers and a scrape.
+    </p>
+
+    <p>
+      Agent memory is where this stops being theoretical. A memory that concatenates is a
+      transcript; a memory that merges is a knowledge base. The difference between them is
+      whether the things in it have names that survive leaving the process that created them.
+    </p>
+
+    <h2>Human-friendly is not a synonym for simple</h2>
+
+    <p>
+      It is worth being honest that the human side of this bargain is not free. The features
+      that make JSON-LD pleasant to write — aliases, <code>@container</code>,
+      <code>@nest</code>, scoped contexts, type coercion — are all ergonomics layered over a
+      model that does not have them, and each one is a place where the document you read and
+      the graph it denotes stop looking alike. That gap is the format's real learning curve,
+      and it is <a href="graphs.html">the subject of the previous note</a>.
+    </p>
+
+    <p>
+      But the gap is the price of admission, not a defect. Something has to absorb the
+      distance between an austere triple model and a document a person will willingly edit
+      at four in the afternoon. Either the format absorbs it, or every application does,
+      individually, in a mapping layer nobody maintains.
+    </p>
+
+    <div class="callout callout--tool">
+      <img src="../assets/img/mark.svg" alt="">
+      <p>
+        <strong>Which is why this tool shows both forms at once.</strong>
+        The document you are editing, the graph it denotes, and — on demand — the expansion
+        with every dropped key marked and every value traced back to the line that produced
+        it. If the two readers of your data see different things, you should be able to see
+        that too, before it ships.
+      </p>
+    </div>
+
+    <h2>Where does it get stored?</h2>
+
+    <p>
+      Granting all of the above, the obvious question is where this data lives. The honest
+      answer for most of the last decade has been: awkwardly. You either stored documents
+      and lost the graph, or stored triples and lost the document, and the conversion sat in
+      your application as a permanent tax.
+    </p>
+
+    <p>
+      <strong>TerminusDB</strong> is JSON-LD native and has been for years, which is more
+      than most can say. What kept me from reaching for it is that the query path runs
+      through a proprietary language and the deployment assumes a server — reasonable
+      choices for a document collaboration platform, and the wrong shape for anything
+      edge-first or agent-local, where the store should be a file next to the process that
+      uses it.
+    </p>
+
+    <p>
+      <strong>Fluree</strong> is the one I would look at now. It began as a Clojure system
+      and the engine was rewritten in Rust, which made it embeddable and filesystem-backed
+      rather than a service you operate. It takes JSON-LD natively — documents in,
+      documents out — and answers SPARQL over the same data, so the document form and the
+      graph form are two interfaces onto one store rather than two copies kept in sync by
+      hope. For an agent that needs a local, durable, mergeable memory, that is very close
+      to the right shape.
+    </p>
+
+    <p class="margin-note">
+      Take the product claims here as a direction to investigate rather than a benchmark.
+      What I am confident about is the shape of the thing that is needed; which
+      implementation gets there first is an empirical question and you should run it
+      yourself.
+    </p>
+
+    <h2>The dichotomy was always false</h2>
+
+    <p>
+      Document store or graph store, readable or machine-processable, human-friendly or
+      agent-friendly: these are presented as forks in the road and they are not. They are
+      two readings of the same bytes, and the algorithm that converts between them is
+      specified, deterministic and forty pages long — which means somebody already did the
+      hard part and published it as a W3C recommendation in 2020.
+    </p>
+
+    <p>
+      Three habits follow, and they are what I would actually ask of a team shipping this.
+    </p>
+
+    <p>
+      <strong>Pin the context and vendor it.</strong> The meaning of your documents is
+      resolved from a URL owned by somebody else, at some unknown later time, on somebody
+      else's machine. Fetch it once, commit it, hash it, and make a change to it a reviewable
+      diff. A context that can be edited upstream is a schema migration that can happen
+      without your knowledge.
+    </p>
+
+    <p>
+      <strong>Test the expansion, not the document.</strong> Your test suite should assert
+      on what the document expands to, because that is what was actually said. A test over
+      the compacted JSON verifies a contract with developers, which is worth having, and
+      tells you nothing about whether the graph is the one you meant. They break
+      independently.
+    </p>
+
+    <p>
+      <strong>Give agents identities, not keys.</strong> Anywhere data crosses a boundary —
+      between tool calls, into memory, out to another service — the entities in it should
+      carry IRIs. Everything expensive about multi-agent data plumbing is reconciliation,
+      and reconciliation is a cost you pay for having used local names.
+    </p>
+
+    <p>
+      None of this requires believing that the semantic web won. It requires noticing that
+      one specific piece of it — a canonical, lossless, bidirectional mapping between a
+      document a human will edit and a graph a machine can merge — turned out to be exactly
+      the piece the agent era needs, and that it has been sitting in production, quietly
+      signing diplomas, the entire time.
+    </p>
+
+    <p style="color:var(--ink-soft);font-size:0.94rem;border-top:1px solid var(--rule);padding-top:1.1rem">
+      A shorter version of this argument appeared as
+      <a href="https://volodymyrpavlyshyn.substack.com/p/json-ld-the-bridge-between-graphs">JSON-LD: the bridge between graphs, agents and humans</a>.
+      This one is longer and more opinionated about expansion.
+    </p>
+
+    <div class="pager">
+      <a href="graphs.html">← Two pictures of the same graph</a>
+      <a href="../book/">The handbook →</a>
+    </div>
+
+    <img class="fleuron" src="../assets/img/fleuron.svg" alt="">
+
+  </article>
+</main>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <div>
+      <h2>Read</h2>
+      <ul>
+        <li><a href="../book/">The JSON-LD handbook</a></li>
+        <li><a href="linked-data.html">What linked data is for</a></li>
+        <li><a href="verifiable-credentials.html">The context you sign</a></li>
+        <li><a href="graphs.html">Two pictures of the same graph</a></li>
+        <li><a href="agents.html">The format an agent and a human can share</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Build</h2>
+      <ul>
+        <li><a href="../">The tool</a></li>
+        <li><a href="https://github.com/Volland/dr-json-ld">Source on GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@json-ld-modeler/ldm">ldm on npm</a></li>
+      </ul>
+    </div>
+    <p class="footer__note">
+      Dr. JSON-LD is MIT licensed. A checksum detects accident and casual tampering; it
+      is not a signature, and nothing here implies otherwise.
+    </p>
+  </div>
+  <div class="footer__legal">
+    <span>&copy; 2026 Wolodymyr Pawlyshyn</span>
+    <a href="../impressum.html">Impressum</a>
+    <a href="../datenschutz.html">Datenschutz</a>
+    <a href="../agb.html">AGB</a>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -18,6 +18,7 @@ import {
   type Io,
 } from './io.js'
 import { initCommand } from './init.js'
+import { skillCommand } from './skill-commands.js'
 import {
   alias,
   checkProjectCommand,
@@ -80,6 +81,11 @@ A project (found by searching upward, or named with --project):
   ldm diff <a> <b> [--fail-on additive|compatible|breaking|semantic|illegal] [--json]
   ldm search <query> [--json]
 
+Authoring skills (guidance for a coding agent; they produce nothing):
+  ldm skill list
+  ldm skill install --project|--user [<name>...]
+             [--format agent-skill,agents,chatmode] [--force]
+
 There is no command that renames a version: a version's name is its content
 hash. \`ldm alias rename\` moves the label instead.
 
@@ -130,6 +136,7 @@ const TAKES_VALUE = new Set([
   'fail-on',
   'name',
   'model',
+  'format',
   'prefix',
   'base',
   'base-url',
@@ -150,6 +157,7 @@ const COMMANDS = new Set([
   'publish',
   'diff',
   'search',
+  'skill',
 ])
 
 export async function run(argv: readonly string[], io: Io = nodeIo): Promise<number> {
@@ -206,6 +214,8 @@ export async function run(argv: readonly string[], io: Io = nodeIo): Promise<num
         return diff(context)
       case 'search':
         return searchCommand(context)
+      case 'skill':
+        return skillCommand(context)
       case 'emit':
         return emitCommand(parsed, io)
       case 'ids':

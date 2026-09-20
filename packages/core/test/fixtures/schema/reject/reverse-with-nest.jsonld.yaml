@@ -1,0 +1,10 @@
+# reject: reverseExclusiveFacet
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  # A reverse property cannot also be nested.
+  bad: { "@reverse": "ex:childOf", "@nest": "meta" }

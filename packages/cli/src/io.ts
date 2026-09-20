@@ -3,6 +3,7 @@
  * subprocess and without touching the real filesystem root.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { dirname } from 'node:path'
 
 export const EXIT_OK = 0
@@ -16,6 +17,13 @@ export interface Io {
   writeFile(path: string, content: string): void
   exists(path: string): boolean
   cwd(): string
+  /**
+   * The user's home directory. Here rather than read from `node:os` at the call
+   * site for the same reason `cwd` is: a verb that writes outside the working
+   * directory must be drivable by a test that does not write into the real home
+   * directory of whoever is running it.
+   */
+  home(): string
 }
 
 export const nodeIo: Io = {
@@ -28,6 +36,7 @@ export const nodeIo: Io = {
   },
   exists: (path) => existsSync(path),
   cwd: () => process.cwd(),
+  home: () => homedir(),
 }
 
 export class UsageError extends Error {

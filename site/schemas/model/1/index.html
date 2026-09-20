@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The model file, field by field — Dr. JSON-LD</title>
+<meta name="description" content="Every field a .jsonld.yaml model may declare, its type, whether it is required, and the facet combinations the schema refuses. Generated from the schema itself.">
+<link rel="icon" href="../../../assets/img/mark.svg">
+<link rel="stylesheet" href="../../../assets/fonts.css">
+<link rel="stylesheet" href="../../../assets/css/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <a class="brand" href="../../../">
+      <img src="../../../assets/img/mark.svg" alt="">
+      <span>Dr. JSON-LD<small>apothecary for linked data</small></span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      <a href="../../../">The tool</a>
+      <a href="../../../book/">Handbook</a>
+      <a href="../../../blog/">Notes</a>
+      <a href="https://github.com/Volland/dr-json-ld">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="wrap prose prose--wide">
+
+  <p class="eyebrow">Schema reference · model format 1</p>
+  <h1>The model file, <em>field by field</em></h1>
+
+  <p class="standfirst">
+    A .jsonld.yaml model file. The file is about JSON-LD; it is not itself JSON-LD.
+    This page is generated from the schema, so it cannot describe a field the schema
+    does not have — or miss one it does.
+  </p>
+
+  <div class="callout callout--tool">
+    <p>
+      Point your editor at the schema and it will check the file as you type:
+    </p>
+    <pre><code># yaml-language-server: $schema=https://volland.github.io/dr-json-ld/schemas/model/1/model.schema.json</code></pre>
+    <p>
+      The schema is served at <a href="https://volland.github.io/dr-json-ld/schemas/model/1/model.schema.json"><code>https://volland.github.io/dr-json-ld/schemas/model/1/model.schema.json</code></a>.
+      The <code>1</code> in that path is the model format version — the same <code>1</code>
+      the file's own <code>jsonld:</code> key declares. It never changes meaning, so a model
+      pinned to it keeps validating.
+    </p>
+  </div>
+
+  <h2>The file</h2>
+
+  <p>
+    A model declares a namespace and the terms it defines. Everything else is optional.
+    The file is <em>about</em> JSON-LD and is not itself JSON-LD, which is why it is named
+    <code>.jsonld.yaml</code> and not <code>.jsonld</code>.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Top-level fields</caption>
+      <thead><tr><th>Field</th><th>Accepts</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><code>jsonld</code></td>
+        <td><code>&quot;1&quot;</code></td>
+        <td>required</td>
+        <td>The version of this model format the file is written against.</td>
+      </tr>
+      <tr>
+        <td><code>namespace</code></td>
+        <td>object</td>
+        <td>required</td>
+        <td>The prefix and base IRI that give this model's own terms their global identity.<br><span class="dim">no other keys</span></td>
+      </tr>
+      <tr>
+        <td><code>project</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>The project this model belongs to. The named project's file must list this model. A model that declares none behaves exactly as it did before projects existed.<br><span class="dim">matches <code>^[A-Za-z0-9][A-Za-z0-9._-]*$</code></span></td>
+      </tr>
+      <tr>
+        <td><code>mode</code></td>
+        <td><code>&quot;1.1&quot;</code>, <code>&quot;1.0&quot;</code></td>
+        <td>optional</td>
+        <td>The JSON-LD processing mode this model targets. A property of the model, never a flag on a command.<br><span class="dim">defaults to <code>&quot;1.1&quot;</code></span></td>
+      </tr>
+      <tr>
+        <td><code>vocab</code></td>
+        <td><a href="#iri">iri</a></td>
+        <td>optional</td>
+        <td>@vocab for the emitted context. Makes every unmapped key expand rather than drop.</td>
+      </tr>
+      <tr>
+        <td><code>base</code></td>
+        <td><a href="#iri">iri</a></td>
+        <td>optional</td>
+        <td>@base for the emitted context.</td>
+      </tr>
+      <tr>
+        <td><code>prefixes</code></td>
+        <td>mapping to <a href="#absoluteIri">absoluteIri</a></td>
+        <td>optional</td>
+        <td>Prefix declarations. Each emits as a term in the generated context.</td>
+      </tr>
+      <tr>
+        <td><code>uses</code></td>
+        <td>sequence of <a href="#usesEntry">usesEntry</a></td>
+        <td>optional</td>
+        <td>Contexts this model builds on but does not own. Referenced, not flattened.</td>
+      </tr>
+      <tr>
+        <td><code>terms</code></td>
+        <td>mapping to <a href="#term">term</a></td>
+        <td>required</td>
+        <td>A flat map from JSON key to term definition. A term is never declared as belonging to a class.</td>
+      </tr>
+      <tr>
+        <td><code>examples</code></td>
+        <td>sequence of <a href="#example">example</a></td>
+        <td>optional</td>
+        <td>Example documents by path, each with the outcome validating it must produce.</td>
+      </tr>
+      <tr>
+        <td><code>views</code></td>
+        <td>sequence of <a href="#view">view</a></td>
+        <td>optional</td>
+        <td>Named subsets of the model, each forming one pair of diagrams.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>What the schema refuses</h2>
+
+  <p>
+    A term may carry every JSON-LD 1.1 facet, and the schema refuses only combinations
+    JSON-LD itself forbids. A combination the specification permits is accepted here even
+    where it is a likely mistake — the schema's reach stops exactly where
+    <code>ldm check</code> stops, so the editor never underlines a model the command
+    accepts.
+  </p>
+
+  <ul>
+      <li>
+        <strong>A legal @container combination</strong> <span class="dim">(<code>containerCombination</code>)</span><br>
+        @list combines with nothing. Otherwise at most one container beyond @set, except that @graph may pair with @id or @index.
+      </li>
+      <li>
+        <strong>A reverse property's container</strong> <span class="dim">(<code>reverseContainerFacet</code>)</span><br>
+        A term declaring @reverse may carry @container: @set or @index, and nothing else.
+      </li>
+      <li>
+        <strong>A reverse property's identity</strong> <span class="dim">(<code>reverseExclusiveFacet</code>)</span><br>
+        A term declaring @reverse names its IRI through @reverse, so it may not also carry @id or @nest.
+      </li>
+  </ul>
+
+  <div class="callout callout--warn">
+    <p>
+      Two combinations are deliberately <strong>not</strong> refused. A term carrying both
+      <code>@language</code> and a <code>@type</code> coercion is legal: JSON-LD reads
+      <code>@language</code> only when <code>@type</code> is absent, so the language is
+      ignored rather than rejected. And a model declaring <code>mode: "1.0"</code> may use a
+      facet JSON-LD 1.1 introduced — that is a downgrade, reported as
+      <code>L1.facet-not-in-mode</code> at warning severity, not an illegal model.
+    </p>
+    <p>
+      Anything under a term's <code>raw</code> is outside these rules, because
+      <code>raw</code> exists for constructs the model format has not named. It is not a way
+      past <code>ldm check</code>: the facets are merged into the emitted definition and a
+      JSON-LD processor still reads them.
+    </p>
+  </div>
+
+  <h2>Definitions</h2>
+
+  <h3 id="term">term</h3>
+  <p>One JSON-LD term definition. Every 1.1 facet is expressible, plus a raw escape hatch.</p>
+  <div class="table-wrap">
+    <table>
+      <caption>term</caption>
+      <thead><tr><th>Field</th><th>Accepts</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td><a href="#elementId">elementId</a></td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>@id</code></td>
+        <td><a href="#iri">iri</a> or null</td>
+        <td>optional</td>
+        <td>The IRI the key maps to. <code>null</code> drops the term.</td>
+      </tr>
+      <tr>
+        <td><code>@type</code></td>
+        <td><a href="#iri">iri</a> or null</td>
+        <td>optional</td>
+        <td>Type coercion. <code>@id</code> is what makes a string a reference rather than a label.</td>
+      </tr>
+      <tr>
+        <td><code>@container</code></td>
+        <td><a href="#containerValue">containerValue</a> or sequence of <a href="#containerValue">containerValue</a> or null</td>
+        <td>optional</td>
+        <td>The JSON shape a value takes. With the exception of @list, changes no triple.</td>
+      </tr>
+      <tr>
+        <td><code>@language</code></td>
+        <td>string or null</td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>@direction</code></td>
+        <td><code>&quot;ltr&quot;</code>, <code>&quot;rtl&quot;</code>, <code>null</code></td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>@protected</code></td>
+        <td>boolean</td>
+        <td>optional</td>
+        <td>The only facet that constrains what a later context may do.</td>
+      </tr>
+      <tr>
+        <td><code>@context</code></td>
+        <td><a href="#inlineContext">inlineContext</a></td>
+        <td>optional</td>
+        <td>A term-scoped context. Its effect is positional: it applies below this point.</td>
+      </tr>
+      <tr>
+        <td><code>@nest</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>@nest, or a term that itself expands to @nest.</td>
+      </tr>
+      <tr>
+        <td><code>@reverse</code></td>
+        <td><a href="#iri">iri</a></td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>@prefix</code></td>
+        <td>boolean</td>
+        <td>optional</td>
+        <td>Whether this term may be used as a compact-IRI prefix.</td>
+      </tr>
+      <tr>
+        <td><code>@index</code></td>
+        <td><a href="#iri">iri</a></td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>raw</code></td>
+        <td>object</td>
+        <td>optional</td>
+        <td>Any construct the metamodel has not yet given a name. Merged into the emitted definition; reaches the context unchanged.</td>
+      </tr>
+      <tr>
+        <td><code>note</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>Documentation for this term. Carried by the model; a @context cannot hold it.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="usesEntry">usesEntry</h3>
+
+  <div class="table-wrap">
+    <table>
+      <caption>usesEntry</caption>
+      <thead><tr><th>Field</th><th>Accepts</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><code>iri</code></td>
+        <td><a href="#absoluteIri">absoluteIri</a></td>
+        <td>required</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>integrity</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>The hash of the vendored copy this entry was resolved against. Written by <code>ldm vendor</code>.<br><span class="dim">matches <code>^sha256-[A-Za-z0-9+/]+={0,2}$</code></span></td>
+      </tr>
+      <tr>
+        <td><code>note</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="example">example</h3>
+
+  <div class="table-wrap">
+    <table>
+      <caption>example</caption>
+      <thead><tr><th>Field</th><th>Accepts</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td><a href="#elementId">elementId</a></td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>path</code></td>
+        <td>string</td>
+        <td>required</td>
+        <td>—<br><span class="dim">at least 1 character(s)</span></td>
+      </tr>
+      <tr>
+        <td><code>note</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>expect</code></td>
+        <td>object or object</td>
+        <td>required</td>
+        <td>What validating this document must produce. A negative example names the rule ids it must raise.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="view">view</h3>
+
+  <div class="table-wrap">
+    <table>
+      <caption>view</caption>
+      <thead><tr><th>Field</th><th>Accepts</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td><a href="#elementId">elementId</a></td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>name</code></td>
+        <td>string</td>
+        <td>required</td>
+        <td>—<br><span class="dim">at least 1 character(s)</span></td>
+      </tr>
+      <tr>
+        <td><code>note</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>terms</code></td>
+        <td>sequence of string</td>
+        <td>required</td>
+        <td>—</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Scalars</h3>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Named value types</caption>
+      <thead><tr><th>Name</th><th>Accepts</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr>
+        <td id="elementId"><code>elementId</code></td>
+        <td>string</td>
+        <td>A short stable identity. Both the key and the IRI are mutable attributes of it.<br><span class="dim">matches <code>^[a-z0-9]{6,12}$</code></span></td>
+      </tr>
+      <tr>
+        <td id="prefixName"><code>prefixName</code></td>
+        <td>string</td>
+        <td>—<br><span class="dim">matches <code>^[A-Za-z_][A-Za-z0-9_.-]*$</code></span></td>
+      </tr>
+      <tr>
+        <td id="termKey"><code>termKey</code></td>
+        <td>string</td>
+        <td>—<br><span class="dim">at least 1 character(s); must not match <code>^@</code></span></td>
+      </tr>
+      <tr>
+        <td id="iri"><code>iri</code></td>
+        <td>string</td>
+        <td>An absolute IRI, a compact IRI (prefix:suffix), or a relative reference.<br><span class="dim">at least 1 character(s)</span></td>
+      </tr>
+      <tr>
+        <td id="absoluteIri"><code>absoluteIri</code></td>
+        <td>string</td>
+        <td>—<br><span class="dim">matches <code>^[A-Za-z][A-Za-z0-9+.-]*:</code></span></td>
+      </tr>
+      <tr>
+        <td id="containerValue"><code>containerValue</code></td>
+        <td><code>&quot;@list&quot;</code>, <code>&quot;@set&quot;</code>, <code>&quot;@index&quot;</code>, <code>&quot;@id&quot;</code>, <code>&quot;@type&quot;</code>, <code>&quot;@language&quot;</code>, <code>&quot;@graph&quot;</code></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td id="inlineContext"><code>inlineContext</code></td>
+        <td>null or string or object or sequence of null or string or object</td>
+        <td>A scoped context: null, an IRI, an inline object, or an array of those.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="footer__inner">
+    <div>
+      <h2>Read</h2>
+      <ul>
+        <li><a href="../../../book/">The JSON-LD handbook</a></li>
+        <li><a href="../../../blog/linked-data.html">What linked data is for</a></li>
+        <li><a href="../../../blog/agents.html">Agents, humans, and expansion</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2>Reference</h2>
+      <ul>
+        <li><a href="https://volland.github.io/dr-json-ld/schemas/model/1/model.schema.json">The model schema</a></li>
+        <li><a href="https://www.w3.org/TR/json-ld11/">JSON-LD 1.1</a></li>
+        <li><a href="https://github.com/Volland/dr-json-ld">Source on GitHub</a></li>
+      </ul>
+    </div>
+    <p class="footer__note">
+      This page is generated from the schema it documents. Editing it by hand is a change
+      continuous integration will undo.
+    </p>
+  </div>
+  <div class="footer__legal">
+    <span>&copy; 2026 Wolodymyr Pawlyshyn</span>
+    <a href="../../../impressum.html">Impressum</a>
+    <a href="../../../datenschutz.html">Datenschutz</a>
+    <a href="../../../agb.html">AGB</a>
+  </div>
+</footer>
+
+</body>
+</html>

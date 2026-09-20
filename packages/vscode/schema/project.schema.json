@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pavlyshyn.dev/schemas/jsonld-modeler/project.schema.json",
+  "$id": "https://volland.github.io/dr-json-ld/schemas/project/1/project.schema.json",
   "title": "JSON-LD Modeler project",
   "description": "An ldm.project.yaml file. Declares which models belong together, where published versions are written, and which hosts the published tree must serve from.",
   "type": "object",

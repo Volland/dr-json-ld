@@ -1,0 +1,11 @@
+# reject: term
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  name:
+    "@id": schema:name
+    "@propagate": false

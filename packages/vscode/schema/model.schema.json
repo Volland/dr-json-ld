@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://pavlyshyn.dev/schemas/jsonld-modeler/model.schema.json",
+  "$id": "https://volland.github.io/dr-json-ld/schemas/model/1/model.schema.json",
   "title": "JSON-LD Modeler model",
   "description": "A .jsonld.yaml model file. The file is about JSON-LD; it is not itself JSON-LD.",
   "type": "object",
@@ -97,6 +97,98 @@
       "enum": ["@list", "@set", "@index", "@id", "@type", "@language", "@graph"]
     },
 
+    "containerCombination": {
+      "title": "A legal @container combination",
+      "description": "@list combines with nothing. Otherwise at most one container beyond @set, except that @graph may pair with @id or @index.",
+      "if": {
+        "type": "object",
+        "properties": {
+          "@container": { "type": "array", "minItems": 2 }
+        },
+        "required": ["@container"]
+      },
+      "then": {
+        "properties": {
+          "@container": {
+            "not": {
+              "anyOf": [
+                { "contains": { "const": "@list" } },
+                {
+                  "allOf": [
+                    { "not": { "contains": { "const": "@graph" } } },
+                    {
+                      "type": "array",
+                      "minItems": 3
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    { "not": { "contains": { "const": "@graph" } } },
+                    { "not": { "contains": { "const": "@set" } } }
+                  ]
+                },
+                {
+                  "allOf": [
+                    { "contains": { "const": "@graph" } },
+                    {
+                      "not": {
+                        "items": { "enum": ["@graph", "@set", "@id", "@index"] }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "allOf": [
+                    { "contains": { "const": "@graph" } },
+                    { "contains": { "const": "@id" } },
+                    { "contains": { "const": "@index" } }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "reverseContainerFacet": {
+      "title": "A reverse property's container",
+      "description": "A term declaring @reverse may carry @container: @set or @index, and nothing else.",
+      "if": {
+        "type": "object",
+        "required": ["@reverse", "@container"]
+      },
+      "then": {
+        "properties": {
+          "@container": {
+            "oneOf": [
+              { "enum": ["@set", "@index", null] },
+              {
+                "type": "array",
+                "items": { "enum": ["@set", "@index"] },
+                "uniqueItems": true
+              }
+            ]
+          }
+        }
+      }
+    },
+
+    "reverseExclusiveFacet": {
+      "title": "A reverse property's identity",
+      "description": "A term declaring @reverse names its IRI through @reverse, so it may not also carry @id or @nest.",
+      "if": {
+        "type": "object",
+        "required": ["@reverse"]
+      },
+      "then": {
+        "not": {
+          "anyOf": [{ "required": ["@id"] }, { "required": ["@nest"] }]
+        }
+      }
+    },
+
     "inlineContext": {
       "description": "A scoped context: null, an IRI, an inline object, or an array of those.",
       "oneOf": [
@@ -173,6 +265,12 @@
         { "required": ["@id"] },
         { "required": ["@reverse"] },
         { "required": ["raw"] }
+      ],
+
+      "allOf": [
+        { "$ref": "#/$defs/containerCombination" },
+        { "$ref": "#/$defs/reverseContainerFacet" },
+        { "$ref": "#/$defs/reverseExclusiveFacet" }
       ]
     },
 

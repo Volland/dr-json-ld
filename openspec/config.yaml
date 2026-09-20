@@ -356,6 +356,70 @@ context: |
       whether resolution produced an IR. A model with an unknown prefix still has
       a diagram worth drawing; a file mid-keystroke does not.
 
+  ### The schema and the skills, as built
+
+  From `add-authoring-skills-and-published-schema`. No locked decision was
+  amended. Decision 16 was the one under pressure and it held: a skill is a
+  static document that produces no finding, no edit and no exit code, and that
+  is asserted - `ldm check` gives identical findings and the identical exit code
+  with skills installed and absent. The in-product LLM layer stays in M1 OUT;
+  this ships no inference. No open question was settled and nothing moved
+  between the milestone lists: the `docs` in "TS types and the docs site" is the
+  generated-documentation *target*, not this project's own website, so the
+  schema reference page is not that item arriving early.
+
+    - Three of the five facet co-constraints originally specified were wrong
+      about JSON-LD, and were found by reading the processor before writing the
+      schema rather than by a failing test. `@language` beside a `@type`
+      coercion is legal - Create Term Definition step 22 reads `@language` only
+      when `@type` is absent, so the language is *ignored*, and
+      `L1.invalid-language-mapping` never fires for it. `@reverse` excludes
+      `@id` and `@nest`, not `@type`. And a 1.1 facet in a `mode: "1.0"` model
+      is a downgrade at warning severity, so a schema refusing it would have
+      relitigated decision 5 by way of a JSON file.
+    - The rule that came out of it: the schema's reach is bounded by what makes
+      `ldm check` exit non-zero, never by what looks wrong. A warning names a
+      model the tool accepts, so a warning may not correspond to a schema
+      rejection. This is asserted in both directions over the corpus.
+    - Hand-written cases prove a constraint fires and cannot prove it fires on
+      exactly the right set. An over-strict schema refusing a legal model is the
+      worse failure and is the one nobody writes a case for. So the container
+      constraint is checked against the resolver's own answer over all 127
+      subsets of the container values, which is cheap and total.
+    - Ajv reports `schemaPath` relative to whatever subschema a `$ref` resolved
+      to, so a failure inside `#/$defs/term` arrives as `#/additionalProperties`
+      with the name gone. A reject case therefore establishes blame by resolving
+      the named `$defs` entry and running it directly, not by reading an error.
+    - `raw` is exempt from the co-constraints at the schema level and is not an
+      escape from the command: the resolver merges it into the emitted
+      definition and the processor still reads it. A model putting illegal
+      JSON-LD in `raw` is refused - later, and refused. That split is why the
+      exemption is asserted at the schema level and cannot be an accept-corpus
+      case.
+    - `@propagate` is a *context* entry, not a term-definition entry, and the
+      processor correctly refuses it on a term as `L1.invalid-term-definition`.
+      The scenario in `model-format` describing `@propagate` carried through
+      `raw` therefore does not hold and predates this change. Left alone rather
+      than fixed in passing; it wants its own delta.
+    - The old schema `$id` named a host the project does not serve, so every
+      editor outside the extension validated against a 404. A schema whose
+      identifier is not the URL it answers at is worse than an unpublished one,
+      because each `$ref` inside it resolves against the wrong base - hence the
+      deploy-time assertion that the two match.
+    - The site copy adds a third way to be wrong that nothing else notices: the
+      Pages workflow fires only on `site/**`, so a schema edited in `core` and
+      not mirrored there deploys nothing and leaves the published URL serving
+      the old rules. The copy-identity test runs in the CI workflow for that
+      reason, not only where the site is built.
+    - `--project` is a value-taking flag elsewhere in the CLI, so the shared
+      parser swallowed the argument in `ldm skill install --project <name>` and
+      installed everything. Found by running the binary, not by a unit test. The
+      value is reclaimed as a skill name, since `ldm skill` accepts no project
+      path.
+    - `homedir` moved into the CLI's `Io` seam for the same reason `cwd` is
+      there: a verb that writes outside the working directory has to be testable
+      without writing into the home directory of whoever runs the suite.
+
 rules:
   proposal:
     - State which locked decision the change touches, or state that it touches none.

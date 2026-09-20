@@ -304,3 +304,25 @@ export {
 
 // ---- emit additions --------------------------------------------------------
 export { retargetVersionHeader, versionHeaderLine } from './emit/emit.js'
+
+// ---- authoring skills ------------------------------------------------------
+export {
+  commandsIn,
+  loadSkills,
+  parseSkill,
+  ruleIdsIn,
+  skillNamed,
+  SkillError,
+  type Skill,
+} from './skills/skill.js'
+export {
+  bodyOf,
+  directoryFor,
+  FORMATS,
+  render,
+  renderAgents,
+  renderAgentSkill,
+  renderChatmode,
+  type Format,
+  type RenderedFile,
+} from './skills/render.js'

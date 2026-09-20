@@ -1,0 +1,10 @@
+# reject: containerCombination
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  # @graph takes one partner, not both.
+  bad: { "@id": "ex:a", "@container": ["@graph", "@id", "@index"] }

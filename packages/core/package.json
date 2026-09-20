@@ -1,22 +1,65 @@
 {
   "name": "@json-ld-modeler/core",
   "version": "0.2.0",
+  "description": "JSON-LD 1.1 processor and validator that reports what your documents silently lose, with a JSON Pointer from every result back to the line that produced it.",
+  "keywords": [
+    "json-ld",
+    "jsonld",
+    "linked-data",
+    "rdf",
+    "semantic-web",
+    "knowledge-graph",
+    "context",
+    "expansion",
+    "compaction",
+    "validation",
+    "vocabulary",
+    "ontology",
+    "verifiable-credentials",
+    "did",
+    "schema-org",
+    "w3c",
+    "graph",
+    "ai-agents"
+  ],
+  "homepage": "https://volland.github.io/dr-json-ld/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Volland/dr-json-ld.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/Volland/dr-json-ld/issues"
+  },
+  "author": "Volodymyr Pavlyshyn (https://github.com/Volland)",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
     "./schema": "./schema/model.schema.json"
   },
-  "files": ["dist", "schema"],
-  "publishConfig": { "access": "public" },
-  "scripts": { "build": "tsc --build" },
+  "files": [
+    "dist",
+    "schema",
+    "skills"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc --build"
+  },
   "dependencies": {
     "yaml": "^2.6.0"
   },
   "devDependencies": {
-    "jsonld": "^8.3.2",
-    "@types/jsonld": "^1.5.15"
+    "@types/jsonld": "^1.5.15",
+    "ajv": "^8.20.0",
+    "jsonld": "^8.3.2"
   }
 }

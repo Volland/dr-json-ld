@@ -72,9 +72,31 @@ Importing an existing context is therefore a bootstrap rather than a synchroniza
 
 Models are YAML validated by a JSON Schema the extension contributes through `contributes.jsonValidation`, so completion, hover, and structural errors come from VS Code's existing YAML tooling at no cost.
 
-Owning no parser is a deliberate trade, and it is the same one `lpg-modeler` made. The durable asset is the intermediate representation, the processor and the emitters; the surface syntax stays swappable. The schema lives once in `core` and is copied into the extension, with a test asserting the two are identical — an editor and a CLI that disagree about what a model may say is the one failure this arrangement invites.
+Owning no parser is a deliberate trade, and it is the same one `lpg-modeler` made. The durable asset is the intermediate representation, the processor and the emitters; the surface syntax stays swappable. The schema lives once in `core` and is copied into the extension and into the published site tree, with a test asserting all three are identical — an editor and a CLI that disagree about what a model may say is the one failure this arrangement invites.
 
 The file suffix is `.jsonld.yaml`. It is deliberately not `.jsonld`: the file is *about* JSON-LD and is not itself JSON-LD, and a tool that blurred that would be teaching the wrong thing in its first five seconds.
+
+### What the schema refuses
+
+The schema carries the facet co-constraints JSON-LD itself imposes, as named `$defs` entries composed into the term through `allOf`.
+
+They are three: a legal `@container` combination, a `@reverse` term whose container is `@set` or `@index` only, and a `@reverse` term carrying neither `@id` nor `@nest`.
+
+They are named rather than inlined because a JSON Schema validator reports an anonymous `if`/`then` failure as "must not match schema" at the root. A named subschema with a title gives the editor a sentence to print and the [[architecture#Distribution#Documentation site#Schema reference|reference page]] something to document.
+
+The reach stops exactly where [[packages/core/src/validate/validate.ts#validateModel|validation]] stops failing. Two combinations that look like mistakes are deliberately accepted: `@language` beside a `@type` coercion, which JSON-LD ignores rather than refuses, and a 1.1 facet in a `mode: "1.0"` model, which [[metamodel#Terms]] makes a downgrade at warning severity. A schema refusing either would be the only voice saying so, and a warning names a model the tool accepts.
+
+This bound is a property rather than a convention: a corpus of must-accept and must-reject models runs against the schema and against `validateModel`, and a file the two disagree about fails the build. Continuous integration additionally asserts every reject case makes `ldm check` exit non-zero, because the schema is what an editor runs and the command is what a pull request runs.
+
+`raw` is outside the co-constraints, because it exists for constructs the metamodel has not named. It is not a way past the command: the facets are merged into the emitted definition and the processor still reads them, so illegal JSON-LD in `raw` is reported later rather than not at all.
+
+### Published at its own identifier
+
+Each schema is served from the documentation site at a path carrying a schema format version, and its `$id` is the URL it is served from.
+
+The `$id` previously named a host the project does not serve, so every editor outside the extension — and every agent — validated against a 404. A schema whose identifier is not the URL it answers at is worse than an unpublished one, because each `$ref` inside it resolves against the wrong base, so the deploy asserts the two match rather than trusting them.
+
+The version segment is the model format version the file's own `jsonld:` key declares. A schema change that rejects a model the served schema accepted goes to a new segment *and* bumps that format version, because a model that must change to keep validating is a model-format change and not a packaging one. A change that only loosens or re-describes is published in place.
 
 ## Package Boundary
 
@@ -164,11 +186,45 @@ A model declares its example documents, stores them as their own files, and reco
 
 Keeping payloads out of the model file is a readability decision: a realistic document is hundreds of lines and would swamp the vocabulary it illustrates, and it deserves its own diff. Declaring them in the model is what makes a failure unambiguous — a document that fails has an expectation to fail against, so it is either the document or the model, and the model says which was intended. See [[metamodel#Examples]] and [[validation#Expected Outcomes]].
 
+## Authoring Skills
+
+The tool ships guidance documents for the coding agent that now writes the first draft of most models. `ldm skill list` names them; `ldm skill install` writes them.
+
+Four of them: designing a vocabulary, writing the model file, reading a finding, and publishing a version.
+
+A skill is prose and produces nothing. Locked decision 16 requires the LLM layer to be optional, clearly labelled, and never the source of a diagnostic, an edit or a continuous-integration result, and that is held structurally rather than by discipline: nothing in `check`, `emit`, `explain` or `diff` reads the skills, and a test asserts `ldm check` gives identical findings and the identical exit code with them installed and absent. Where a skill would need a fact about a particular model it names the command that produces it, because a document cannot know what is in a file it has never seen.
+
+The skills live in [[packages/core/src/skills/skill.ts#loadSkills|core]] rather than in the CLI. The extension is the obvious second consumer, and moving them later would change the source paths for anyone who had vendored them. They are markdown read at run time rather than strings baked into `dist`, so `tsc` stays the typechecker and nothing new enters the build.
+
+### Three formats, one source
+
+Agent Skills, a vendor-neutral `AGENTS.md` bundle and Copilot chatmodes are three framings of the same body, each produced by a pure function from the parsed skill.
+
+Three hand-written files per skill is what every project shipping multi-agent guidance does, and it is why their formats disagree within two releases. Here the guard is mechanical: [[packages/core/test/skills.test.ts|a test]] parses each rendering back out and asserts the body, the rule ids and the commands are identical across all three. Frontmatter differs; content cannot.
+
+Prose that is merely out of date is not detectable and is accepted — it is why a skill routes to a command rather than answering. What *is* checkable is checked: every rule id a skill names must exist in the registry, and every command it names must be a command. A skill citing a rule that was renamed sends the reader looking for something that is not there, which is worse than citing none.
+
+### Installing
+
+`ldm skill install` requires `--project` or `--user`, and has no default.
+
+The failure mode of guessing is writing files into a directory the caller did not mean, and a wrong `--user` install is invisible — it then applies to every repository they open afterwards.
+
+Overwrite protection is by comparison rather than by timestamp: a file identical to what would be written is *current*, a file that differs is *modified* and is left alone, and `--force` takes the new version. There is no merge, because a skill is prose and a three-way merge of prose is a worse outcome than a clear refusal.
+
+The home directory is reached through [[packages/cli/src/io.ts#Io|the CLI's `Io` seam]] rather than from `node:os` at the call site, for the same reason `cwd` is: a verb that writes outside the working directory has to be drivable by a test that does not write into the home directory of whoever is running it.
+
+Nothing here reaches the network — the skills ship inside the package — and continuous integration proves it by running the install in the job where outbound traffic is already dropped.
+
 ## Distribution
 
 The extension ships to the Marketplace as `pavlyshyn.jsonld-modeler`; the CLI is `@json-ld-modeler/ldm` on npm, installing a command called `ldm`. The CLI is what a pull request runs.
 
 `ldm` rather than `jsonld`, because `jsonld.js` already publishes a `jsonld` binary and a name collision in a tool whose credibility rests on being the careful one about JSON-LD would be a poor first impression. The bare name `ldm` turned out to be taken too — an unrelated log viewer holds it — so the package is scoped and only the command is short. The command is the name a user types every day; the package name is one they type once.
+
+Each published package carries its own README and a copy of the licence. npm renders only what is inside the tarball, so a scoped package whose page is empty reads as abandoned, and the two packages have different audiences: the CLI page is for someone choosing a tool, the core page for someone building on the library. Both link the site, the handbook and the extension, because the install is where a reader arrives first.
+
+Every install line outside this repository names `@json-ld-modeler/ldm`. The bare `ldm` on npm is the unrelated log viewer, so a `npm install -g ldm` in the site or the extension README installs somebody else's software — it is a wrong instruction rather than a stale one, and the scoped name is used even where the short command reads better.
 
 The extension bundle inlines core so that it is self-contained. The CLI does not: it declares `@json-ld-modeler/core` as an ordinary dependency, because npm can resolve it and a published library is worth more to anyone building on the model than a saved megabyte is.
 
@@ -180,11 +236,19 @@ The Marketplace icon must be a PNG, so the artwork in `packages/vscode/media/` i
 
 ### Documentation site
 
-`site/` is a hand-written static site served from GitHub Pages: an introduction to the tool, a nine-chapter JSON-LD handbook, and three essays. No generator and no build step, so the deployed bytes are the committed bytes.
+`site/` is a hand-written static site served from GitHub Pages: an introduction to the tool, a nine-chapter JSON-LD handbook, and four essays. No generator and no build step, so the deployed bytes are the committed bytes.
 
 Jekyll runs on this host unless `.nojekyll` is present, and it drops every path beginning with an underscore. The marker is committed and the deploy workflow asserts it, because the failure it prevents is a silent 404 rather than a build error.
 
 The workflow also resolves every relative `href` and `src` against the committed tree before deploying. A relative path that is wrong resolves anyway when a page is opened from disk, so the check has to run somewhere that is not a local browser.
+
+#### Schema reference
+
+`site/schemas/` serves the JSON Schemas at the URLs their `$id`s name, and beside each one a generated page documenting every field it defines, its type, whether it is required, and each named co-constraint.
+
+The page is generated into the repository by `scripts/schema-reference.mjs` and the workflow re-runs the generator and fails on a diff. Generating at deploy time would produce a page nobody reviewed, and this one makes factual claims about the schema's fields; the arrangement is the same regeneration-and-compare the emitted `@context` uses, for the same reason. The generator lives outside `site/` because everything under `site/` deploys verbatim and a build script is not part of the published site.
+
+Two assertions are added to the deploy rather than trusted. Every `*.schema.json` must parse and its `$id` must equal its served path — nothing else would catch a moved directory, because a schema is not an HTML page and the link checker never opens one. And the schema copies are compared in the *other* workflow as well, because this one fires only on `site/**`: a schema edited in `core` and not mirrored here would otherwise deploy nothing, change nothing, and leave the published URL quietly serving the old rules.
 
 #### Legal pages
 

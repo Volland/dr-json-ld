@@ -1,0 +1,30 @@
+# `raw` is exempt from the schema's co-constraints: the schema's `term` entry
+# constrains the facets the metamodel names, and `raw` is an open object
+# beneath them. That exemption is asserted at the schema level, in
+# `schema-corpus.test.ts`, because it is a claim about the schema alone.
+#
+# What `raw` is not is a way past `ldm check`. The resolver merges it into the
+# emitted definition and the processor validates the result, so a term
+# definition carrying an entry JSON-LD does not define is still refused —
+# later than a named facet would be, and refused. Hence this file, which is an
+# accept case, carries only what a term definition may legally hold.
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  scoped:
+    "@id": ex:scoped
+    "@context":
+      # @propagate is a *context* entry, not a term-definition entry, so this
+      # is where it belongs — no escape hatch required.
+      "@propagate": false
+      inner: ex:inner
+    raw:
+      "@protected": true
+
+  parentOf:
+    "@reverse": ex:childOf
+    "@container": ["@index", "@set"]

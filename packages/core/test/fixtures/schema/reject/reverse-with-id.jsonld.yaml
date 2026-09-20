@@ -1,0 +1,10 @@
+# reject: reverseExclusiveFacet
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  # @reverse already names the IRI; @id would name a second one.
+  bad: { "@reverse": "ex:childOf", "@id": "ex:parentOf" }

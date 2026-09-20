@@ -1,0 +1,10 @@
+# reject: reverseContainerFacet
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  # A reverse property may carry @set or @index, and nothing else.
+  bad: { "@reverse": "ex:childOf", "@container": "@language" }

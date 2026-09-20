@@ -1,0 +1,10 @@
+# reject: containerCombination
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  # Two containers beyond @set, and neither is @graph.
+  bad: { "@id": "ex:a", "@container": ["@id", "@index"] }

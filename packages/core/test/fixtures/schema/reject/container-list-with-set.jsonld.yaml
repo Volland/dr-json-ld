@@ -1,0 +1,10 @@
+# reject: containerCombination
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  # @list combines with nothing at all.
+  bad: { "@id": "ex:a", "@container": ["@list", "@set"] }

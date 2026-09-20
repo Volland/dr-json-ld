@@ -1,8 +1,42 @@
 {
   "name": "@json-ld-modeler/ldm",
   "version": "0.2.0",
+  "description": "ldm — author a JSON-LD @context as a reviewable YAML model, validate what your documents lose, and gate it in CI. Runs with the network off.",
+  "keywords": [
+    "json-ld",
+    "jsonld",
+    "cli",
+    "linked-data",
+    "rdf",
+    "semantic-web",
+    "knowledge-graph",
+    "context",
+    "validator",
+    "linter",
+    "ci",
+    "expansion",
+    "vocabulary",
+    "ontology",
+    "verifiable-credentials",
+    "schema-org",
+    "w3c",
+    "ai-agents"
+  ],
+  "homepage": "https://volland.github.io/dr-json-ld/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Volland/dr-json-ld.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/Volland/dr-json-ld/issues"
+  },
+  "author": "Volodymyr Pavlyshyn (https://github.com/Volland)",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": { "ldm": "./dist/bin.js" },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

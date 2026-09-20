@@ -118,10 +118,10 @@ examples:
 
 ## The CLI is what your pull request runs
 
-The extension is for authoring. Gating is [`ldm`](https://www.npmjs.com/package/ldm):
+The extension is for authoring. Gating is [`@json-ld-modeler/ldm`](https://www.npmjs.com/package/@json-ld-modeler/ldm):
 
 ```bash
-npm install -g ldm
+npm install -g @json-ld-modeler/ldm
 
 ldm check vocabulary.jsonld.yaml       # what your examples lose
 ldm emit  vocabulary.jsonld.yaml --out build

@@ -37,9 +37,14 @@ const coreBoundary = {
  * they get Node's globals. Kept narrow: only the scripts, not the sources.
  */
 const buildScripts = {
-  files: ['**/build.mjs', '*.config.js', '*.config.ts'],
+  files: ['**/build.mjs', 'scripts/**/*.mjs', '*.config.js', '*.config.ts'],
   languageOptions: {
-    globals: { process: 'readonly', console: 'readonly', __dirname: 'readonly' },
+    globals: {
+      process: 'readonly',
+      console: 'readonly',
+      __dirname: 'readonly',
+      URL: 'readonly',
+    },
   },
 }
 
