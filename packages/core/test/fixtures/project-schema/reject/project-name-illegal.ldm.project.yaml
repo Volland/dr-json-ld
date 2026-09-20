@@ -1,0 +1,8 @@
+# reject: /name
+# The project name appears in the header of every artifact it publishes and in
+# a published path, so a name with a space produces a URL nobody asked for.
+project: "1"
+name: "my catalogue"
+
+models:
+  core: models/core.jsonld.yaml

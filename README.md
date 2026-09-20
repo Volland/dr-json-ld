@@ -13,8 +13,10 @@ library: every finding it reports points at a line in a file you wrote.
 
 **A model, not a hand-edited artifact.** The canonical file is
 `<name>.jsonld.yaml`, holding semantics only. The `@context` is generated from
-it and says so in its header. A JSON Schema ships with the extension, so
-completion and structural errors come from your editor's existing YAML tooling.
+it and says so in its header. A JSON Schema ships with the extension and is
+published at its own URL, so completion and structural errors come from your
+editor's YAML tooling — Red Hat's YAML extension, which the extension installs
+with itself.
 
 **Two panes.** The canvas shows the JSON shape a developer will type beside the
 RDF graph it denotes, sharing one selection. The whole difficulty of JSON-LD

@@ -27,7 +27,7 @@ const SCHEMA = fileURLToPath(new URL('../schema/model.schema.json', import.meta.
  */
 const DECLARED = /^#\s*reject:\s*(\S+)/
 
-const document = JSON.parse(readFileSync(SCHEMA, 'utf8')) as { $id: string }
+const document = JSON.parse(readFileSync(SCHEMA, 'utf8')) as { $id: string; $defs?: Record<string, { type?: string }> }
 
 function compiler(): Ajv2020 {
   return new Ajv2020({ strict: false, allErrors: true })
@@ -49,10 +49,35 @@ function namedConstraint(name: string): ValidateFunction | undefined {
   return ajv.getSchema(`${document.$id}#/$defs/${name}`)
 }
 
-/** The values a term-level or root-level constraint could be blaming. */
-function candidates(model: unknown): unknown[] {
-  const terms = (model as { terms?: Record<string, unknown> } | null)?.terms
-  return [model, ...(terms && typeof terms === 'object' ? Object.values(terms) : [])]
+/**
+ * The values a constraint could be blaming, each kept beside what it is.
+ *
+ * The kind matters: a `$defs` entry describing a *key* is a string schema, and
+ * every object in the file trivially violates a string schema. Without the
+ * pairing, a case declaring `prefixName` would be blamed on the model root and
+ * pass no matter what the prefix key said — the exact wrong-reason pass the
+ * declaration exists to prevent.
+ */
+function candidates(model: unknown): Array<{ what: string; value: unknown }> {
+  const out: Array<{ what: string; value: unknown }> = [{ what: 'the model root', value: model }]
+  const root = model as { terms?: Record<string, unknown>; prefixes?: Record<string, unknown> } | null
+
+  for (const [key, value] of Object.entries(root?.terms ?? {})) {
+    out.push({ what: `the term key "${key}"`, value: key })
+    out.push({ what: `the term "${key}"`, value })
+  }
+  for (const [key, value] of Object.entries(root?.prefixes ?? {})) {
+    out.push({ what: `the prefix name "${key}"`, value: key })
+    out.push({ what: `the prefix "${key}"`, value })
+  }
+  return out
+}
+
+/** A string `$defs` entry may only be blamed on a string, and likewise an object. */
+function comparable(constraintSchema: { type?: string }, value: unknown): boolean {
+  if (constraintSchema.type === 'string') return typeof value === 'string'
+  if (constraintSchema.type === 'object') return typeof value === 'object' && value !== null
+  return true
 }
 
 describe('the model schema, executed against a corpus', () => {
@@ -82,10 +107,14 @@ describe('the model schema, executed against a corpus', () => {
 
     const constraint = namedConstraint(declared!)
     expect(constraint, `#/$defs/${declared} is not in the schema`).toBeDefined()
+    const schema = (document as { $defs?: Record<string, { type?: string }> }).$defs?.[declared!] ?? {}
+    const blamed = candidates(model).filter(
+      (c) => comparable(schema, c.value) && !constraint!(c.value),
+    )
     expect(
-      candidates(model).some((value) => !constraint!(value)),
+      blamed.map((c) => c.what),
       `nothing in ${file} violates #/$defs/${declared}, so this case is passing for the wrong reason`,
-    ).toBe(true)
+    ).not.toEqual([])
   })
 
   it('every fixture model the tool ships is in the accept corpus', () => {
@@ -170,3 +199,93 @@ function isLegalContainerCombination(values: readonly string[]): boolean {
   }
   return false
 }
+
+/**
+ * The project schema's corpus, with its own blame convention.
+ *
+ * The model corpus blames a named `$defs` entry, which works because its
+ * refusals live there. The project schema's refusals are mostly root-level —
+ * an unknown key, a name's pattern, a model path's suffix — and have no `$defs`
+ * entry to name. A case therefore declares the *data* location that must be at
+ * fault, written as an Ajv `instancePath` (`#` for the root), and the test
+ * requires a reported error there. That is a stricter check than the model
+ * corpus makes, not a looser one: it pins where the refusal lands, not only
+ * that one happened.
+ *
+ * @lat: [[architecture#Architecture#Projects#Checked like a model]]
+ */
+const PROJECT_CORPUS = fileURLToPath(new URL('./fixtures/project-schema/', import.meta.url))
+const PROJECT_SCHEMA = fileURLToPath(new URL('../schema/project.schema.json', import.meta.url))
+const PROJECT_DECLARED = /^#\s*reject:\s*(\S+)/
+
+export function loadProjectSchema(): ValidateFunction {
+  return compiler().compile(JSON.parse(readFileSync(PROJECT_SCHEMA, 'utf8')))
+}
+
+describe('the project schema, executed against a corpus', () => {
+  const validate = loadProjectSchema()
+
+  function cases(kind: 'accept' | 'reject'): Array<{ name: string; file: string }> {
+    return readdirSync(`${PROJECT_CORPUS}${kind}`)
+      .filter((f) => f.endsWith('.yaml'))
+      .sort()
+      .map((name) => ({ name, file: `${PROJECT_CORPUS}${kind}/${name}` }))
+  }
+
+  // @lat: [[architecture#Architecture#Projects#Checked like a model]]
+  it.each(cases('accept'))('accepts $name', ({ file }) => {
+    const project = parse(readFileSync(file, 'utf8'))
+    expect(validate(project), JSON.stringify(validate.errors, null, 2)).toBe(true)
+  })
+
+  // @lat: [[architecture#Architecture#Projects#Checked like a model]]
+  it.each(cases('reject'))('rejects $name', ({ file }) => {
+    const text = readFileSync(file, 'utf8')
+    const declared = PROJECT_DECLARED.exec(text)?.[1]
+    expect(declared, `${file} must declare the location it is refused at`).toBeDefined()
+
+    const project = parse(text)
+    expect(validate(project), 'the schema accepted a file the corpus says it must refuse').toBe(
+      false,
+    )
+
+    const at = declared === '#' ? '' : declared!
+    const paths = (validate.errors ?? []).map((e) => e.instancePath)
+    expect(
+      paths.some((p) => p === at || p.startsWith(`${at}/`)),
+      `${file} is refused, but at ${JSON.stringify(paths)} rather than at "${declared}", so this case is passing for the wrong reason`,
+    ).toBe(true)
+  })
+})
+
+/**
+ * A published schema with no corpus is a schema nothing holds to its word. This
+ * is the guard that makes adding the next one impossible to forget.
+ *
+ * @lat: [[architecture#Architecture#Surface Syntax#What the schema refuses]]
+ */
+describe('every published schema is exercised', () => {
+  it('has an accept and a reject corpus', () => {
+    const CORPORA: Record<string, string> = {
+      'model.schema.json': CORPUS,
+      'project.schema.json': PROJECT_CORPUS,
+    }
+    const published = readdirSync(fileURLToPath(new URL('../schema/', import.meta.url)))
+      .filter((f) => f.endsWith('.schema.json'))
+      .sort()
+
+    const missing: string[] = []
+    for (const schema of published) {
+      const dir = CORPORA[schema]
+      if (!dir) {
+        missing.push(`${schema} has no corpus`)
+        continue
+      }
+      for (const kind of ['accept', 'reject']) {
+        const files = readdirSync(`${dir}${kind}`).filter((f) => f.endsWith('.yaml'))
+        if (files.length === 0) missing.push(`${schema} has an empty ${kind} corpus`)
+      }
+    }
+    expect(missing).toEqual([])
+  })
+})

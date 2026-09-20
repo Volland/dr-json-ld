@@ -1,0 +1,8 @@
+# reject: /models
+# A model name is how a command names the model. "not a name" cannot be typed
+# as one, so the entry is unreachable from every command that takes a name.
+project: "1"
+name: catalogue
+
+models:
+  "not a name": models/core.jsonld.yaml

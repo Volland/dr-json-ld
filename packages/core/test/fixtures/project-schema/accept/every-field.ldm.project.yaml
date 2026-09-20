@@ -1,0 +1,17 @@
+project: "1"
+name: catalogue.v2
+
+baseUrl: https://example.org/catalogue/
+published: published
+versions: versions
+hosts:
+  - github-pages
+  - plain
+
+note: |
+  Every optional field, so a change that tightens one of them is caught by a
+  file that used it rather than by nobody.
+
+models:
+  core: models/core.jsonld.yaml
+  people: models/people.jsonld.yaml

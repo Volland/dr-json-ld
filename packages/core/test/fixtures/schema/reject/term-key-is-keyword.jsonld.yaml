@@ -1,0 +1,12 @@
+# reject: termKey
+# A key beginning with "@" is a JSON-LD keyword position, not a term. Defining
+# one would put a term where the processor reads a keyword.
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  "@type":
+    "@id": ex:type

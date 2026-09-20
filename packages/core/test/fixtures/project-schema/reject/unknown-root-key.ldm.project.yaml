@@ -1,0 +1,9 @@
+# reject: #
+# A key the project format does not define is almost always a misspelling of one
+# it does. Accepting it silently drops whatever the author meant by it.
+project: "1"
+name: catalogue
+publish: published
+
+models:
+  core: models/core.jsonld.yaml

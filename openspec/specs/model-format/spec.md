@@ -218,6 +218,11 @@ SHALL be accepted by the schema. The schema SHALL be the earlier report of the s
 fact, never a second and different opinion. A finding at warning severity SHALL NOT
 correspond to a schema rejection, because a warning names a model the tool accepts.
 
+Earlier means *while the user types*. A refusal the editor's schema execution does not
+evaluate is therefore not an earlier report of anything, and SHALL either be expressed
+in a form the editor evaluates or be recorded as command-only against the rule id that
+reports it.
+
 #### Scenario: The schema rejects what validation accepts
 
 - **WHEN** a model file is rejected by the schema and validation reports no error
@@ -238,4 +243,10 @@ correspond to a schema rejection, because a warning names a model the tool accep
 
 - **WHEN** a model file violating a facet co-constraint is checked
 - **THEN** validation reports the specific L1 rule for that constraint at error severity
-- **AND** the finding carries a line and column into the model file
+
+#### Scenario: A refusal the editor never evaluates
+
+- **WHEN** the schema refuses a model file only through a construct the editor's schema execution ignores
+- **THEN** the build fails unless that refusal is recorded as command-only
+- **AND** the record names the rule id validation reports it under
+

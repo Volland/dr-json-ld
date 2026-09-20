@@ -18,6 +18,29 @@ import { pointerChild, pointerRoot, type JsonPointer } from '../source/pointer.j
 /** The one file that declares a project. */
 export const PROJECT_FILE = 'ldm.project.yaml'
 
+/**
+ * The suffix a model file must carry. Deliberately not `.jsonld`: the file is
+ * *about* JSON-LD and is not itself JSON-LD.
+ */
+export const MODEL_SUFFIX = '.jsonld.yaml'
+
+/** The shape a project or model name must take, identical to the project schema's. */
+export const SCAFFOLD_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
+
+/**
+ * Why `value` cannot name a project or a model, or `undefined` when it can.
+ *
+ * Returning the reason rather than a boolean is what lets the CLI, the extension
+ * and a finding show the same sentence without any of them restating the rule.
+ */
+export function nameProblem(kind: 'project' | 'model', value: string): string | undefined {
+  if (value === '') return `a ${kind} name is required`
+  if (!SCAFFOLD_NAME_PATTERN.test(value)) {
+    return `"${value}" cannot name a ${kind}: use letters, digits, dot, dash or underscore, beginning with a letter or a digit`
+  }
+  return undefined
+}
+
 export const PROJECT_FORMAT_VERSION = '1'
 
 /** Hosts this build knows how to validate a published tree against. */
@@ -150,6 +173,20 @@ export function parseProject(text: string, file: string): LoadProjectResult {
       pointerChild(pointerRoot(), 'name'),
       'A project must declare a name. It appears in the header of every artifact the project publishes.',
     )
+  } else {
+    // The same sentence `ldm init` refuses with. A name this tool would not
+    // create is a name it must not silently accept when hand-written, because
+    // it reaches a published path.
+    const problem = nameProblem('project', name)
+    if (problem) {
+      findings.raise(
+        'L0.schema-violation',
+        source,
+        pointerChild(pointerRoot(), 'name'),
+        `${problem[0]!.toUpperCase()}${problem.slice(1)}.`,
+        { subject: name },
+      )
+    }
   }
 
   // ---- models --------------------------------------------------------------
@@ -183,12 +220,35 @@ export function parseProject(text: string, file: string): LoadProjectResult {
     const seenPaths = new Map<string, string>()
     for (const [modelName, value] of entries) {
       const pointer = pointerChild(modelsPointer, modelName)
+      const nameIssue = nameProblem('model', modelName)
+      if (nameIssue) {
+        findings.raise(
+          'L0.schema-violation',
+          source,
+          pointer,
+          `${nameIssue[0]!.toUpperCase()}${nameIssue.slice(1)}. A command names a model by this key.`,
+          { subject: modelName },
+        )
+        continue
+      }
       if (typeof value !== 'string' || value === '') {
         findings.raise(
           'L0.schema-violation',
           source,
           pointer,
           `Model "${modelName}" must map to a path.`,
+          { subject: modelName },
+        )
+        continue
+      }
+      // The suffix is not decoration: a `.jsonld` file claims to *be* JSON-LD,
+      // and the model file is about JSON-LD without being it.
+      if (!value.endsWith(MODEL_SUFFIX)) {
+        findings.raise(
+          'L0.schema-violation',
+          source,
+          pointer,
+          `Model "${modelName}" maps to "${value}", which does not end in "${MODEL_SUFFIX}". A model file is about JSON-LD and is not itself JSON-LD.`,
           { subject: modelName },
         )
         continue

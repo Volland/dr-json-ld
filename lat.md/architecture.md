@@ -30,6 +30,18 @@ Nothing downstream can catch it. A placeholder IRI resolves, validates and emits
 
 Neither command overwrites. Rewriting a model that is already there would destroy its [[metamodel#Stable Element IDs|element ids]], which are the one thing in the file that cannot be reconstructed by reading it.
 
+### Checked like a model
+
+The project file is the second canonical file kind, so it is held to what a model file is held to: its findings carry a rule id and a position, they reach the editor as diagnostics, and its schema and its parsing are required to agree.
+
+None of that was true before. Every `L0.project-*` rule existed and `ldm check` reported them, but the editor published diagnostics only for `.jsonld.yaml`, so the only way to learn a project file was wrong was to run a command — in a file the extension itself writes on **New Project**.
+
+The agreement is the same bound the model pair uses, and asserting it found three places where the two disagreed: a model name no command could type, a model path not ending in `.jsonld.yaml`, and a project name the schema's pattern refuses. Each was refused by the schema and accepted by parsing, which is the direction that teaches an author the underline is noise. Each now raises `L0.schema-violation` at its own line.
+
+`ldm init` had refused all three from the beginning, through the same sentence the finding now carries. That is the tell: a tool that will not *create* a name but silently *accepts* it when hand-written has two rules and has not noticed. The name rule and the model suffix live in one place for that reason, used by scaffolding and parsing alike.
+
+Editor diagnostics come from parsing the project file alone, not from checking every model it declares. The file is re-read on each keystroke, and a model's own findings are published against that model's file when it is open.
+
 ## Versions and the Published Tree
 
 A version is an immutable, content-addressed snapshot of a model: the model as written, the [[emitters#Change Management#Lockfile|lockfile]], the examples, and the emitted artifacts, under a manifest that hashes every file and then hashes itself.
@@ -70,11 +82,31 @@ Importing an existing context is therefore a bootstrap rather than a synchroniza
 
 ## Surface Syntax
 
-Models are YAML validated by a JSON Schema the extension contributes through `contributes.jsonValidation`, so completion, hover, and structural errors come from VS Code's existing YAML tooling at no cost.
+Models are YAML validated by a JSON Schema, so completion, hover and structural errors come from the editor's existing YAML tooling rather than from a language server this project would otherwise have to write and maintain.
 
 Owning no parser is a deliberate trade, and it is the same one `lpg-modeler` made. The durable asset is the intermediate representation, the processor and the emitters; the surface syntax stays swappable. The schema lives once in `core` and is copied into the extension and into the published site tree, with a test asserting all three are identical — an editor and a CLI that disagree about what a model may say is the one failure this arrangement invites.
 
 The file suffix is `.jsonld.yaml`. It is deliberately not `.jsonld`: the file is *about* JSON-LD and is not itself JSON-LD, and a tool that blurred that would be teaching the wrong thing in its first five seconds.
+
+### Reaching the editor
+
+The schema reaches the editor through `contributes.yamlValidation`, which is read by `redhat.vscode-yaml`, declared as a hard dependency so that installing this extension installs the thing that executes the schema.
+
+It did not, for the first two releases, and how it failed is the reason the arrangement is now asserted rather than assumed. The manifest contributed the schema through both `jsonValidation` and `yamlValidation`, and nothing read either: `jsonValidation` is read by the editor's own JSON language service, which never sees a YAML file, and `yamlValidation` is read only by an extension nothing here installed or named. The published schema was inert. The one reason for choosing YAML — that an editor would validate it at no cost — bought nothing, while the README promised that nothing needed installing.
+
+A declared dependency rather than a recommendation or an extension pack, because the promise is unconditional. A pack lets a user disable the single component the feature depends on and returns silently to the state above, which is worse than an honest requirement. `redhat.vscode-yaml` is MIT, so the licence costs nothing.
+
+Two properties hold it rather than a convention: every published schema is contributed through a point that *can* apply to the file pattern it names, and whatever reads that point is a declared dependency. Both are checked against the manifest.
+
+#### Executable by the editor
+
+A refusal the editor never evaluates is not an earlier report of anything, so every constraint in both schemas is either expressed in a form the editor runs or recorded as command-only against the rule id that reports it instead.
+
+The record ships empty, and that is a measured result rather than a hope: `yaml-language-server`'s own validators evaluate `propertyNames`, `prefixItems`, `unevaluatedProperties` and `dependentRequired`, so its 2020-12 coverage is effectively total and nothing needed moving.
+
+The check is therefore an allowlist, not a denylist. It fails on a keyword nobody has verified rather than on one known to be broken, because a list of unsupported keywords would assert almost nothing here, while a list of verified ones catches the keyword somebody adds later without checking.
+
+Keyed maps are nonetheless written with `patternProperties` rather than `propertyNames`, for a smaller reason: a bad key then reports at the key itself as "not allowed", and the [[architecture#Distribution#Documentation site#Schema reference|reference page]] prints each map's key shape, which it could not read out of `propertyNames`.
 
 ### What the schema refuses
 
@@ -123,6 +155,18 @@ Registering the canvas as a `CustomTextEditorProvider` is rejected for the reaso
 Every canvas action becomes a set of targeted text splices computed from the YAML syntax tree, never a re-serialization of the document.
 
 `Document.toString()` normalizes flow-collection padding across the whole file, so re-serializing turns a one-facet change into a whole-file diff. A block's extent is found by indentation rather than by node range, because a YAML node's own range can run past its block into whatever follows. This is machinery `lpg-modeler` has already proven, and it is the first candidate for the extracted package described in [[architecture#Roadmap]].
+
+### Quick fixes
+
+A finding names what is wrong and where. For a few rules there is exactly one legal repair, and those are offered as a quick fix on the diagnostic: a registry in `core` keyed by rule id, returning the same targeted splices the canvas uses.
+
+The registry is keyed by rule id rather than inferred, because a guessed repair to a file the user owns is worse than no repair. A rule absent from it offers nothing, and each absence has a stated reason: the information is not in the finding (`L1.unknown-prefix`), there are two legal repairs (`L1.facet-not-in-mode`), the remedy is a network command rather than an edit (`L1.context-not-vendored`), or the repair is deletion (`L2.term-unused`).
+
+It lives in `core` and returns splices rather than editor edits, so the same repair is reachable from a command, and every entry is testable in plain Node. The extension is a lookup and a translation into one `WorkspaceEdit`, which is also what makes a fix a single undo step. It re-validates to find the finding rather than rebuilding one from the diagnostic, because a diagnostic carries a rule id and a position but not the pointer and subject a repair reads.
+
+The property that makes the registry safe to extend is per-entry and executable: apply the fix, re-validate, and the finding it claimed is gone while no error that was absent before has appeared. A fix that silenced a finding by breaking something else fails it.
+
+A repair that changes what the model *means*, rather than only making it legal, must say so in its title. Nothing uses that yet. Its intended first user is `L2.coercion-did-not-fire`, which is reported in an example document and repaired in the model — a cross-file fix the registry cannot express while a fix is splices against one file.
 
 ### Intents
 

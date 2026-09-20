@@ -54,14 +54,85 @@ describe('published JSON Schema', () => {
     expect(schema.$id).toBe(`${SITE}/schemas/${published}/${file}`)
   })
 
-  it.each(SCHEMAS)('$file is contributed for $fileMatch', ({ file, fileMatch }) => {
-    const manifest = JSON.parse(
+  /**
+   * A contribution point is only worth declaring if something installed reads it
+   * for the file pattern it names. `jsonValidation` is read by the editor's own
+   * JSON language service, which never sees a YAML file, so contributing a
+   * `*.yaml` pattern through it looks like support and delivers none — which is
+   * exactly the state this table replaced.
+   *
+   * @lat: [[architecture#Architecture#Surface Syntax#Reaching the editor]]
+   */
+  const CONTRIBUTION_POINTS: Array<{
+    point: string
+    readBy: string
+    appliesTo: (fileMatch: string) => boolean
+  }> = [
+    {
+      point: 'yamlValidation',
+      readBy: 'redhat.vscode-yaml',
+      appliesTo: (fileMatch) => fileMatch.endsWith('.yaml') || fileMatch.endsWith('.yml'),
+    },
+    {
+      point: 'jsonValidation',
+      readBy: "the editor's built-in JSON language service",
+      appliesTo: (fileMatch) => fileMatch.endsWith('.json'),
+    },
+  ]
+
+  const manifest = (): {
+    extensionDependencies?: string[]
+    contributes: Record<string, Array<{ fileMatch: string; url: string }> | unknown>
+  } =>
+    JSON.parse(
       readFileSync(fileURLToPath(new URL('../../vscode/package.json', import.meta.url)), 'utf8'),
     )
-    for (const key of ['jsonValidation', 'yamlValidation'] as const) {
-      const entries: Array<{ fileMatch: string; url: string }> = manifest.contributes[key]
-      expect(entries, key).toContainEqual({ fileMatch, url: `./schema/${file}` })
+
+  /** The point that actually delivers a schema for a given file pattern. */
+  function deliveringPoint(fileMatch: string): { point: string; readBy: string } {
+    const found = CONTRIBUTION_POINTS.find((p) => p.appliesTo(fileMatch))
+    if (!found) throw new Error(`no contribution point can apply to ${fileMatch}`)
+    return found
+  }
+
+  // @lat: [[architecture#Architecture#Surface Syntax#Reaching the editor]]
+  it.each(SCHEMAS)('$file is contributed for $fileMatch', ({ file, fileMatch }) => {
+    const { point } = deliveringPoint(fileMatch)
+    const entries = manifest().contributes[point] as
+      | Array<{ fileMatch: string; url: string }>
+      | undefined
+    expect(entries, `contributes.${point} is missing`).toBeDefined()
+    expect(entries, point).toContainEqual({ fileMatch, url: `./schema/${file}` })
+  })
+
+  /**
+   * The inverse, and the one that would have caught the original defect: an
+   * entry declared through a point that cannot apply to the pattern it names.
+   */
+  it('no schema is contributed through a point that cannot apply to its pattern', () => {
+    const contributes = manifest().contributes
+    const wrong: string[] = []
+    for (const { point, readBy, appliesTo } of CONTRIBUTION_POINTS) {
+      const entries = contributes[point] as Array<{ fileMatch: string }> | undefined
+      for (const entry of entries ?? []) {
+        if (!appliesTo(entry.fileMatch)) {
+          wrong.push(
+            `contributes.${point} declares "${entry.fileMatch}", but ${point} is read by ${readBy}, which never sees that file`,
+          )
+        }
+      }
     }
+    expect(wrong).toEqual([])
+  })
+
+  // @lat: [[architecture#Architecture#Surface Syntax#Reaching the editor]]
+  it.each(SCHEMAS)('$file reaches the editor through a declared dependency', ({ fileMatch }) => {
+    const { readBy } = deliveringPoint(fileMatch)
+    const declared = manifest().extensionDependencies ?? []
+    expect(
+      declared,
+      `${readBy} executes the schema for ${fileMatch}, so it must be an extension dependency`,
+    ).toContain(readBy)
   })
 
   it('the extension ships no schema core does not publish', () => {

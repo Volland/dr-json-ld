@@ -1,0 +1,15 @@
+# reject: prefixName
+# A prefix must be usable on the left of a compact IRI. "not a prefix" is not,
+# so a context emitted from this model would carry a mapping nothing can name.
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+prefixes:
+  "not a prefix": https://schema.org/
+
+terms:
+  name:
+    "@id": ex:name

@@ -53,6 +53,20 @@ export function isBlankNodeId(value: string): boolean {
   return value.startsWith('_:')
 }
 
+/**
+ * The shape a declared prefix name must take, kept identical to the model
+ * schema's `prefixName` so the editor and the command refuse the same set.
+ *
+ * A prefix that cannot stand on the left of a compact IRI is not a prefix: it
+ * emits into the context as a mapping nothing can ever name, which is silent at
+ * every later step.
+ */
+const PREFIX_NAME = /^[A-Za-z_][A-Za-z0-9_.-]*$/
+
+export function isLegalPrefixName(value: string): boolean {
+  return PREFIX_NAME.test(value)
+}
+
 /** `prefix:suffix`, where the suffix does not begin with `//`. */
 export function splitCompactIri(value: string): { prefix: string; suffix: string } | undefined {
   const i = value.indexOf(':')

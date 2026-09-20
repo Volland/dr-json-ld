@@ -312,3 +312,95 @@ describe('the project file itself', () => {
 function readFixture(relativePath: string): string {
   return readFileSync(join(GOOD, relativePath), 'utf8')
 }
+
+/**
+ * A finding without a position is not finished: the whole point of reporting in
+ * the project file rather than in a command's output is that the editor can put
+ * the underline on the line the author wrote.
+ *
+ * These are the project rules a user actually hits, each checked for the rule id
+ * *and* for a position landing on the offending line rather than on the root.
+ *
+ * @lat: [[architecture#Architecture#Projects#Checked like a model]]
+ * @lat: [[validation#Validation#Findings]]
+ */
+describe('every project finding carries a position into the project file', () => {
+  /** The 1-based line of the first line whose text contains `needle`. */
+  function lineOf(text: string, needle: string): number {
+    const i = text.split('\n').findIndex((l) => l.includes(needle))
+    if (i < 0) throw new Error(`no line contains ${needle}`)
+    return i + 1
+  }
+
+  const cases: Array<{
+    name: string
+    ruleId: string
+    body: string
+    /** Text on the line the finding must land on. */
+    at: string
+    files?: Record<string, string>
+  }> = [
+    {
+      name: 'a model file that does not exist',
+      ruleId: 'L0.project-model-missing',
+      body: 'name: p\nmodels:\n  gone: models/gone.jsonld.yaml\n',
+      at: 'gone:',
+    },
+    {
+      name: 'two names for one model file',
+      ruleId: 'L0.project-duplicate-model',
+      body: 'name: p\nmodels:\n  a: m.jsonld.yaml\n  b: m.jsonld.yaml\n',
+      at: 'b:',
+      files: { 'm.jsonld.yaml': MODEL },
+    },
+    {
+      name: 'no models at all',
+      ruleId: 'L0.project-no-models',
+      body: 'name: p\nmodels: {}\n',
+      at: 'models:',
+    },
+    {
+      name: 'a host this build does not know',
+      ruleId: 'L0.project-unknown-host',
+      body: 'name: p\nmodels:\n  a: m.jsonld.yaml\nhosts: [netlify]\n',
+      at: 'hosts:',
+      files: { 'm.jsonld.yaml': MODEL },
+    },
+    {
+      name: 'a project name that cannot be published',
+      ruleId: 'L0.schema-violation',
+      body: 'name: "my project"\nmodels:\n  a: m.jsonld.yaml\n',
+      at: 'name:',
+      files: { 'm.jsonld.yaml': MODEL },
+    },
+    {
+      name: 'a model name no command could type',
+      ruleId: 'L0.schema-violation',
+      body: 'name: p\nmodels:\n  "not a name": m.jsonld.yaml\n',
+      at: 'not a name',
+      files: { 'm.jsonld.yaml': MODEL },
+    },
+    {
+      name: 'a model path claiming to be JSON-LD itself',
+      ruleId: 'L0.schema-violation',
+      body: 'name: p\nmodels:\n  a: m.jsonld\n',
+      at: 'a: m.jsonld',
+      files: { 'm.jsonld': MODEL },
+    },
+  ]
+
+  it.each(cases)('$name reports $ruleId at its own line', ({ ruleId, body, at, files }) => {
+    const text = projectFile(body)
+    const root = workspace({ ...(files ?? {}), [PROJECT_FILE]: text })
+    const { findings } = loadProject(join(root, PROJECT_FILE))
+
+    const finding = findings.find((f) => f.ruleId === ruleId)
+    expect(
+      finding,
+      `expected ${ruleId}, got ${findings.map((f) => f.ruleId).join(', ') || 'nothing'}`,
+    ).toBeDefined()
+    expect(finding!.loc.line, `${ruleId} landed on the wrong line`).toBe(lineOf(text, at))
+    expect(finding!.loc.column, `${ruleId} has no column`).toBeGreaterThan(0)
+    expect(finding!.pointer, `${ruleId} has no pointer`).toBeTruthy()
+  })
+})

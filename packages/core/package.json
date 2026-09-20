@@ -1,6 +1,6 @@
 {
   "name": "@json-ld-modeler/core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "JSON-LD 1.1 processor and validator that reports what your documents silently lose, with a JSON Pointer from every result back to the line that produced it.",
   "keywords": [
     "json-ld",

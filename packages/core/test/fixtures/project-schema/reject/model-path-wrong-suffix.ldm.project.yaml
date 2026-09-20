@@ -1,0 +1,8 @@
+# reject: /models/core
+# The suffix is not decoration: `.jsonld` would claim the file is JSON-LD, which
+# is exactly the confusion the model format exists to avoid.
+project: "1"
+name: catalogue
+
+models:
+  core: models/core.jsonld

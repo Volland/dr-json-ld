@@ -4,6 +4,42 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-09-20
+
+### Fixed — the schema now actually reaches your editor
+
+The extension contributed its JSON Schema through `contributes.yamlValidation`,
+which only Red Hat's YAML extension reads, and through `contributes.jsonValidation`,
+which never applies to a YAML file at all. Nothing declared or recommended the
+former, so on a clean install neither fired: there was no completion, no hover and
+no structural error on a model file, and the README claimed there was nothing to
+install.
+
+`redhat.vscode-yaml` is now a declared extension dependency, so your editor
+installs it alongside this one. The dead `jsonValidation` entries are gone. Both
+`.jsonld.yaml` models and `ldm.project.yaml` are covered.
+
+### Added — the project file is checked in the editor
+
+`ldm.project.yaml` now reports its findings as diagnostics, at the line that
+produced them. Every `L0.project-*` rule already existed and `ldm check` already
+reported them; the Problems panel had simply stayed empty.
+
+Holding the project schema to what project parsing accepts found three
+disagreements, each of which the schema refused and parsing let through: a model
+name no command could type, a model path not ending in `.jsonld.yaml`, and a
+project name that cannot appear in a published path. `ldm init` had refused all
+three from the start, so the two halves of the tool had different rules.
+
+### Added — quick fixes
+
+A finding with exactly one legal repair now offers it as a quick fix: a reverse
+term carrying a facet it may not carry, a duplicated element id, and a term
+missing from the model's only view. Each arrives as a targeted edit that leaves
+every comment and the key order intact, and as a single undo step.
+
+A rule with no single repair offers nothing rather than a guess.
+
 ## [0.2.0] — 2026-09-19
 
 ### Added — getting started

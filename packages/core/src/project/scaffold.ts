@@ -19,7 +19,7 @@ import { applySplices, blockExtent, type Splice } from '../edit/splice.js'
 import { isAbsoluteIri } from '../iri/iri.js'
 import { SourceIndex } from '../source/index-file.js'
 import { pointerChild, pointerRoot } from '../source/pointer.js'
-import { KNOWN_HOSTS, PROJECT_FORMAT_VERSION, type HostName } from './project.js'
+import { KNOWN_HOSTS, MODEL_SUFFIX, nameProblem, PROJECT_FORMAT_VERSION, SCAFFOLD_NAME_PATTERN, type HostName } from './project.js'
 
 /** A scaffold that cannot be written, and why. Callers turn this into their own error. */
 export class ScaffoldError extends Error {
@@ -32,24 +32,13 @@ export class ScaffoldError extends Error {
 // ---- names ------------------------------------------------------------------
 
 /** Project and model names, from the two JSON Schemas that govern them. */
-export const SCAFFOLD_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/
-
 /** A JSON-LD prefix. Not a name: it may not contain a colon, and it seeds terms. */
 const PREFIX_PATTERN = /^[A-Za-z_][A-Za-z0-9._-]*$/
 
-/**
- * Why `value` cannot name a project or a model, or `undefined` when it can.
- *
- * Returning the reason rather than a boolean is what lets the CLI and the
- * extension show the same sentence without either one restating the rule.
- */
-export function nameProblem(kind: 'project' | 'model', value: string): string | undefined {
-  if (value === '') return `a ${kind} name is required`
-  if (!SCAFFOLD_NAME_PATTERN.test(value)) {
-    return `"${value}" cannot name a ${kind}: use letters, digits, dot, dash or underscore, beginning with a letter or a digit`
-  }
-  return undefined
-}
+// The name rule lives in `project.ts` so that parsing a hand-written project
+// file and scaffolding a new one cannot disagree about what a name may be.
+// Re-exported here because both were originally published from this module.
+export { nameProblem, SCAFFOLD_NAME_PATTERN } from './project.js'
 
 /** Why `value` cannot be a namespace prefix, or `undefined` when it can. */
 export function prefixProblem(value: string): string | undefined {
@@ -186,7 +175,7 @@ export function projectScaffold(options: ProjectScaffoldOptions): string {
       throw new ScaffoldError(`"${model.name}" is declared twice; one model has one name`)
     }
     seenNames.add(model.name)
-    if (!model.path.endsWith('.jsonld.yaml')) {
+    if (!model.path.endsWith(MODEL_SUFFIX)) {
       throw new ScaffoldError(`a model file must end in .jsonld.yaml; "${model.path}" does not`)
     }
   }
@@ -266,7 +255,7 @@ export function registerModel(
   declaredPath: string,
 ): RegisterModelResult {
   refuse(nameProblem('model', name))
-  if (!declaredPath.endsWith('.jsonld.yaml')) {
+  if (!declaredPath.endsWith(MODEL_SUFFIX)) {
     throw new ScaffoldError(`a model file must end in .jsonld.yaml; "${declaredPath}" does not`)
   }
 

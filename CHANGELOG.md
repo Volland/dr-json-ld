@@ -4,7 +4,55 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] — 2026-09-20
+
+### Fixed — the published schema never reached your editor
+
+The extension contributed its JSON Schema through `contributes.yamlValidation`,
+which only Red Hat's YAML extension reads, and through `contributes.jsonValidation`,
+which never applies to a YAML file at all. Nothing declared or recommended the
+former, so on a clean install neither fired: a model file got no completion, no
+hover and no structural error, while the README promised there was nothing to
+install. Choosing YAML *because* an editor would validate it had bought nothing.
+
+`redhat.vscode-yaml` is now a declared extension dependency, so installing this
+extension installs what executes the schema. The dead `jsonValidation` entries
+are gone. Two build checks hold it: a schema may only be contributed through a
+point that can apply to the file pattern it names, and whatever reads that point
+must be a declared dependency.
+
+### Added — the project file is checked in the editor
+
+`ldm.project.yaml` now reports findings as diagnostics at the line that produced
+them. Every `L0.project-*` rule already existed and `ldm check` already reported
+them; only the Problems panel stayed empty — in a file the extension itself
+writes on **New Project**.
+
+### Added — quick fixes for findings with one legal repair
+
+A reverse term carrying a facet it may not carry, a duplicated element id, and a
+term missing from the model's only view each offer a fix. Every repair is a
+targeted splice, so comments and key order survive and the change is one undo
+step. A rule with no single repair offers nothing rather than a guess.
+
+### Changed — four files the tool used to accept are now refused
+
+**This can turn a passing build red.** Holding each schema to what the
+corresponding command accepts found four disagreements, every one of them a file
+the schema refused and the command let through:
+
+- a prefix name that cannot stand on the left of a compact IRI
+- a model name no command could type
+- a model path not ending in `.jsonld.yaml`
+- a project name that cannot appear in a published path
+
+Each now reports `L0.schema-violation` at its own line. `ldm init` had refused
+all four from the beginning, through the same sentence the finding now carries —
+so the tool had two rules and had not noticed. The name rule and the model suffix
+now live in one place, used by scaffolding and parsing alike.
+
+If `ldm check` starts failing after this upgrade, these are why, and the finding
+names the file and the line.
 
 ### Added — a page for each published package
 

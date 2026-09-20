@@ -48,7 +48,13 @@ It is a level rather than a separate feature so that a finding from a lint carri
 
 A finding carries a rule id, the level that produced it, a severity, a message, a JSON Pointer into the document or the model, and a resolved line and column. Findings are stable under reordering of the input.
 
-The rule id is what makes a finding referenceable: an [[metamodel#Examples|example]] can require it, a configuration can downgrade it, documentation can explain it, and a change to its wording does not break any of those. Stability under reordering is what makes findings usable in continuous integration, since a diff of findings between two runs should reflect a change in the document rather than a change in iteration order.
+The rule id is what makes a finding referenceable: an [[metamodel#Examples|example]] can require it, a configuration can downgrade it, documentation can explain it, a [[architecture#Architecture#Editing Surface#Quick fixes|quick fix]] can be registered against it, and a change to its wording does not break any of those. Stability under reordering is what makes findings usable in continuous integration, since a diff of findings between two runs should reflect a change in the document rather than a change in iteration order.
+
+### A finding may carry a repair
+
+For a few rules there is exactly one legal repair, and the rule id is the key it is registered under. Most rules have none, and offer none.
+
+The repair is not part of the finding: a finding is a report, and a report that carried an edit would have to be recomputed whenever the file changed under it. It is looked up from the rule id when the user asks, which is also why a finding stays comparable between runs. What the registry is and why it declines are at [[architecture#Architecture#Editing Surface#Quick fixes]].
 
 ## Expected Outcomes
 

@@ -42,8 +42,10 @@
     "prefixes": {
       "description": "Prefix declarations. Each emits as a term in the generated context.",
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/prefixName" },
-      "additionalProperties": { "$ref": "#/$defs/absoluteIri" }
+      "patternProperties": {
+        "^[A-Za-z_][A-Za-z0-9_.-]*$": { "$ref": "#/$defs/absoluteIri" }
+      },
+      "additionalProperties": false
     },
     "uses": {
       "description": "Contexts this model builds on but does not own. Referenced, not flattened.",
@@ -53,8 +55,10 @@
     "terms": {
       "description": "A flat map from JSON key to term definition. A term is never declared as belonging to a class.",
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/termKey" },
-      "additionalProperties": { "$ref": "#/$defs/term" }
+      "patternProperties": {
+        "^[^@]": { "$ref": "#/$defs/term" }
+      },
+      "additionalProperties": false
     },
     "examples": {
       "description": "Example documents by path, each with the outcome validating it must produce.",
@@ -75,13 +79,14 @@
       "pattern": "^[a-z0-9]{6,12}$"
     },
     "prefixName": {
+      "description": "A prefix a compact IRI may use. Declared here so the schema reference documents the key shape that `prefixes` enforces.",
       "type": "string",
       "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*$"
     },
     "termKey": {
+      "description": "A JSON key a term may map. Any non-empty string that does not begin with `@`, because a key beginning with `@` is a JSON-LD keyword position.",
       "type": "string",
-      "minLength": 1,
-      "not": { "pattern": "^@" }
+      "pattern": "^[^@]"
     },
     "iri": {
       "description": "An absolute IRI, a compact IRI (prefix:suffix), or a relative reference.",

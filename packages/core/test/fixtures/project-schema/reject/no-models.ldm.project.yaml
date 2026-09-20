@@ -1,0 +1,7 @@
+# reject: /models
+# A project file the schema accepts with no models would fail every command run
+# against it, so it is not a valid starting state.
+project: "1"
+name: catalogue
+
+models: {}

@@ -52,11 +52,18 @@ Every canvas action becomes a targeted text splice computed from the YAML syntax
 tree. Comments, key order and formatting elsewhere in the file survive untouched,
 and edits arrive as `WorkspaceEdit`s so the editor owns undo.
 
-### Completion from the schema you already have
+### Completion from a published schema
 
 Models are YAML validated by a published JSON Schema the extension contributes,
-so completion, hover and structural errors come from your editor's existing YAML
-tooling. No language server to install.
+so completion, hover and structural errors come from your editor's YAML tooling
+rather than from a language server this extension would have to ship.
+
+That tooling is [Red Hat's YAML extension][yaml] (`redhat.vscode-yaml`, MIT),
+which this extension declares as a dependency — your editor installs it
+alongside, and you do not need to configure anything. The same applies to
+`ldm.project.yaml`.
+
+[yaml]: https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml
 
 ## Getting started
 

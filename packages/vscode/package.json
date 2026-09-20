@@ -3,7 +3,7 @@
   "displayName": "JSON-LD Modeler",
   "description": "Author a JSON-LD @context as a reviewable YAML model, see it as two coordinated diagrams, and find out what your documents are silently losing.",
   "publisher": "pavlyshyn",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
@@ -39,6 +39,9 @@
     "Visualization"
   ],
   "main": "./dist/extension.cjs",
+  "extensionDependencies": [
+    "redhat.vscode-yaml"
+  ],
   "scripts": {
     "build": "tsc --build && node build.mjs",
     "package": "vsce package --no-dependencies",
@@ -48,16 +51,6 @@
     "onLanguage:yaml"
   ],
   "contributes": {
-    "jsonValidation": [
-      {
-        "fileMatch": "*.jsonld.yaml",
-        "url": "./schema/model.schema.json"
-      },
-      {
-        "fileMatch": "ldm.project.yaml",
-        "url": "./schema/project.schema.json"
-      }
-    ],
     "yamlValidation": [
       {
         "fileMatch": "*.jsonld.yaml",
@@ -88,7 +81,7 @@
     ]
   },
   "devDependencies": {
-    "@json-ld-modeler/core": "0.2.0",
+    "@json-ld-modeler/core": "0.3.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/vscode": "^1.90.0",

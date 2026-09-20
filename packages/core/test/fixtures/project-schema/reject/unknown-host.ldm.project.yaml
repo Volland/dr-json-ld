@@ -1,0 +1,11 @@
+# reject: /hosts/0
+# A host this build does not know carries no path constraints, so publishing
+# would silently skip the checks the named host exists to apply.
+project: "1"
+name: catalogue
+
+hosts:
+  - netlify
+
+models:
+  core: models/core.jsonld.yaml

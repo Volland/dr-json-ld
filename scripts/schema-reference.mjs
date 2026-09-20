@@ -45,6 +45,13 @@ function describeType(node) {
   if (node.type === 'object' && node.additionalProperties && node.additionalProperties !== true) {
     return `mapping to ${describeType(node.additionalProperties)}`
   }
+  // A keyed map whose key shape is itself constrained is written as
+  // `patternProperties` rather than `propertyNames`, because that is the form the
+  // editor's schema execution evaluates. It still reads as a mapping.
+  if (node.type === 'object' && node.patternProperties) {
+    const values = Object.values(node.patternProperties)
+    if (values.length === 1) return `mapping to ${describeType(values[0])}`
+  }
   return escape(Array.isArray(node.type) ? node.type.join(' or ') : (node.type ?? 'anything'))
 }
 
@@ -58,7 +65,12 @@ function constraints(node) {
   if (node.minItems !== undefined) out.push(`at least ${node.minItems} item(s)`)
   if (node.uniqueItems) out.push('no duplicates')
   if (node.default !== undefined) out.push(`defaults to <code>${escape(JSON.stringify(node.default))}</code>`)
-  if (node.additionalProperties === false) out.push('no other keys')
+  if (node.patternProperties) {
+    const patterns = Object.keys(node.patternProperties)
+    out.push(`keys match ${patterns.map((p) => `<code>${escape(p)}</code>`).join(' or ')}`)
+  } else if (node.additionalProperties === false) {
+    out.push('no other keys')
+  }
   if (node.not?.pattern) out.push(`must not match <code>${escape(node.not.pattern)}</code>`)
   return out.join('; ') || '—'
 }

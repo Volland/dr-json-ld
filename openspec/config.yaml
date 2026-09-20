@@ -25,7 +25,8 @@ context: |
     - `cli`     wraps core for continuous integration (`ldm check | emit | import`).
     - `vscode`  webview and diagnostics plumbing only.
 
-  Models are YAML validated by a JSON Schema contributed via `contributes.jsonValidation`.
+  Models are YAML validated by a JSON Schema contributed via `contributes.yamlValidation`,
+  executed by `redhat.vscode-yaml`, which the extension declares as a hard dependency.
   In-place edits use the `yaml` package Document API so comments, key order, and
   formatting survive a round trip. Canvas is React Flow (`@xyflow/react`, MIT) with
   ELK auto-layout (`elkjs`, EPL-2.0). Conformance is checked against the W3C JSON-LD
@@ -419,6 +420,45 @@ context: |
     - `homedir` moved into the CLI's `Io` seam for the same reason `cwd` is
       there: a verb that writes outside the working directory has to be testable
       without writing into the home directory of whoever runs the suite.
+
+  ### The editor's schema engine, as of change `fix-model-file-editor-support`
+
+  Measured against `redhat-developer/yaml-language-server@main`
+  (`src/languageservice/parser/schemaValidation/`) and `redhat.vscode-yaml`'s own
+  `extension.ts`, both read rather than assumed.
+
+    - `contributes.yamlValidation` is read by `redhat.vscode-yaml` at runtime,
+      which iterates every installed extension's `packageJSON`. Nothing else
+      reads it. `contributes.jsonValidation` is read by the editor's own JSON
+      language service, which never sees a YAML file, so contributing a `*.yaml`
+      pattern through it delivers nothing while looking like support. Both were
+      declared here and neither fired, because nothing installed or named the
+      extension that reads the first.
+    - A `fileMatch` naming no path is prefixed with `/` by `vscode-yaml`, then
+      stripped and prefixed with `**/` by the json language service. So
+      `*.jsonld.yaml` is evaluated as `**/*.jsonld.yaml` and matches at any
+      depth: the contribution's shape was already correct, and only the missing
+      dependency was broken.
+    - That server's JSON Schema 2020-12 coverage is effectively total.
+      `propertyNames`, `prefixItems`, `unevaluatedProperties`, `unevaluatedItems`,
+      `dependentRequired` and `$dynamicRef` are all evaluated; the only keyword
+      absent from its `src/` is `contentSchema`, which is annotation-only. An
+      earlier assumption that `propertyNames` was unsupported was wrong, and had
+      been used to justify a schema change before anyone checked.
+    - The consequence for the ratchet: a list of *unsupported* keywords asserts
+      almost nothing against this engine, so the check is an allowlist. It fails
+      on a keyword nobody has verified rather than on one known to be broken,
+      which is the only form that catches the keyword added later without anyone
+      checking.
+    - Keyed maps are written with `patternProperties` rather than `propertyNames`
+      on the merits, not from necessity: a bad key then reports at the key as
+      "not allowed", and the generated reference page can print each map's key
+      shape, which it cannot read out of `propertyNames`.
+    - Holding the *project* schema to what `parseProject` accepts found three
+      disagreements: an illegal model name, a model path not ending
+      `.jsonld.yaml`, and a project name the schema's pattern refuses. `ldm init`
+      had refused all three from the start, so scaffolding and parsing carried
+      different rules — the tell that a name rule had been written twice.
 
 rules:
   proposal:

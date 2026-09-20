@@ -13,8 +13,10 @@ import * as vscode from 'vscode'
 import {
   backfillElementIds,
   findProjectFile,
+  fixFor,
   modelScaffold,
   nameProblem,
+  parseProject,
   PLACEHOLDER_BASE,
   PLACEHOLDER_PREFIX,
   PROJECT_FILE,
@@ -22,6 +24,7 @@ import {
   registerModel,
   resolveModelText,
   resolverFor,
+  type Splice,
   SourceIndex,
   validateModel,
   VendorStore,
@@ -53,8 +56,11 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(diagnostics)
 
   const refresh = (document: vscode.TextDocument): void => {
-    if (!isModel(document)) return
-    publishDiagnostics(diagnostics, document)
+    if (isModel(document)) {
+      publishDiagnostics(diagnostics, document)
+      return
+    }
+    if (isProjectFile(document)) publishProjectDiagnostics(diagnostics, document)
   }
 
   for (const document of vscode.workspace.textDocuments) refresh(document)
@@ -62,6 +68,14 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidOpenTextDocument(refresh),
     vscode.workspace.onDidChangeTextDocument((event) => refresh(event.document)),
     vscode.workspace.onDidCloseTextDocument((document) => diagnostics.delete(document.uri)),
+  )
+
+  context.subscriptions.push(
+    vscode.languages.registerCodeActionsProvider(
+      { language: 'yaml', pattern: `**/*${MODEL_SUFFIX}` },
+      new QuickFixProvider(),
+      { providedCodeActionKinds: [vscode.CodeActionKind.QuickFix] },
+    ),
   )
 
   context.subscriptions.push(
@@ -94,6 +108,15 @@ function command(id: string, body: () => Promise<void> | void): vscode.Disposabl
 
 function isModel(document: vscode.TextDocument): boolean {
   return document.uri.fsPath.endsWith(MODEL_SUFFIX)
+}
+
+/**
+ * The project file is the second canonical file kind, and until now the only one
+ * the editor said nothing about: `ldm check` reported every `L0.project-*` rule
+ * and the Problems panel stayed empty.
+ */
+export function isProjectFile(document: vscode.TextDocument): boolean {
+  return document.uri.fsPath.endsWith(PROJECT_FILE)
 }
 
 /**
@@ -170,6 +193,97 @@ function publishDiagnostics(
     if (file === document.uri.fsPath) continue
     collection.set(vscode.Uri.file(file), list)
   }
+}
+
+/**
+ * The project file's own findings, on the same path the model file uses.
+ *
+ * `parseProject` rather than `checkProject`: this runs on every keystroke, and
+ * checking every model the project declares would re-report findings those
+ * files already publish for themselves — and would read the whole project from
+ * disk to do it.
+ *
+ * @lat: [[architecture#Architecture#Projects#Checked like a model]]
+ */
+export function publishProjectDiagnostics(
+  collection: vscode.DiagnosticCollection,
+  document: vscode.TextDocument,
+): void {
+  const path = document.uri.fsPath
+  const { findings } = parseProject(document.getText(), path)
+  collection.set(
+    document.uri,
+    findings.filter((f) => f.file === path).map(toDiagnostic),
+  )
+}
+
+/**
+ * The repair a finding implies, offered on its diagnostic.
+ *
+ * The rule id is the handle: `toDiagnostic` already puts it on the diagnostic as
+ * its `code`, and the registry is keyed by it, so this provider is a lookup and
+ * a translation from splices to a `WorkspaceEdit` — every decision about what a
+ * repair *is* lives in `core`.
+ *
+ * @lat: [[architecture#Architecture#Editing Surface#Quick fixes]]
+ */
+export class QuickFixProvider implements vscode.CodeActionProvider {
+  provideCodeActions(
+    document: vscode.TextDocument,
+    _range: vscode.Range | vscode.Selection,
+    context: vscode.CodeActionContext,
+  ): vscode.CodeAction[] {
+    const ours = context.diagnostics.filter((d) => d.source === DIAGNOSTIC_SOURCE)
+    if (ours.length === 0) return []
+
+    const path = vscode.workspace.asRelativePath(document.uri)
+    const text = document.getText()
+    const source = SourceIndex.parse(text, { path })
+
+    // Re-validated rather than reconstructed from the diagnostic: a diagnostic
+    // carries the rule id and a position, but a fix also needs the finding's
+    // pointer and subject, and inventing those would make the repair land in the
+    // wrong place the moment the two representations drifted.
+    const { ir } = resolveModelText(text, path)
+    const root = dirnameOf(document.uri)
+    const report = validateModel(source, {
+      ...(ir ? { resolveContext: resolverFor(ir, root) } : {}),
+    })
+    const findings = report.findings.filter((f) => f.file === path)
+
+    const actions: vscode.CodeAction[] = []
+    for (const diagnostic of ours) {
+      const ruleId = typeof diagnostic.code === 'string' ? diagnostic.code : undefined
+      if (!ruleId) continue
+
+      const finding = findings.find(
+        (f) => f.ruleId === ruleId && f.loc.line - 1 === diagnostic.range.start.line,
+      )
+      if (!finding) continue
+
+      const fix = fixFor(finding, source)
+      if (!fix) continue
+
+      const action = new vscode.CodeAction(fix.title, vscode.CodeActionKind.QuickFix)
+      action.diagnostics = [diagnostic]
+      action.edit = editFor(document, fix.splices)
+      actions.push(action)
+    }
+    return actions
+  }
+}
+
+/** One `WorkspaceEdit`, so the editor treats the repair as a single undo step. */
+function editFor(document: vscode.TextDocument, splices: readonly Splice[]): vscode.WorkspaceEdit {
+  const edit = new vscode.WorkspaceEdit()
+  for (const splice of splices) {
+    edit.replace(
+      document.uri,
+      new vscode.Range(document.positionAt(splice.start), document.positionAt(splice.end)),
+      splice.text,
+    )
+  }
+  return edit
 }
 
 function toDiagnostic(finding: Finding): vscode.Diagnostic {

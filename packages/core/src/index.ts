@@ -5,7 +5,7 @@
  * This package never imports `vscode`.
  * @lat: [[architecture#Architecture#Package Boundary]]
  */
-export const CORE_VERSION = '0.2.0'
+export const CORE_VERSION = '0.3.0'
 
 // ---- findings --------------------------------------------------------------
 export {
@@ -71,6 +71,7 @@ export { deriveElementId, isElementId, mintElementId } from './model/element-id.
 
 // ---- edit ------------------------------------------------------------------
 export { applySplices, blockExtent, indentAt, type Splice } from './edit/splice.js'
+export { fixFor, isFixable, QUICK_FIXES, type QuickFix } from './edit/fixes.js'
 
 // ---- processor -------------------------------------------------------------
 export { expandIri, processContext } from './processor/active-context.js'

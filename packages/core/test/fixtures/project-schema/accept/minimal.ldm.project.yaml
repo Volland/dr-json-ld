@@ -1,0 +1,5 @@
+project: "1"
+name: catalogue
+
+models:
+  core: models/core.jsonld.yaml

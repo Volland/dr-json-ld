@@ -106,7 +106,7 @@
         <td><code>prefixes</code></td>
         <td>mapping to <a href="#absoluteIri">absoluteIri</a></td>
         <td>optional</td>
-        <td>Prefix declarations. Each emits as a term in the generated context.</td>
+        <td>Prefix declarations. Each emits as a term in the generated context.<br><span class="dim">keys match <code>^[A-Za-z_][A-Za-z0-9_.-]*$</code></span></td>
       </tr>
       <tr>
         <td><code>uses</code></td>
@@ -118,7 +118,7 @@
         <td><code>terms</code></td>
         <td>mapping to <a href="#term">term</a></td>
         <td>required</td>
-        <td>A flat map from JSON key to term definition. A term is never declared as belonging to a class.</td>
+        <td>A flat map from JSON key to term definition. A term is never declared as belonging to a class.<br><span class="dim">keys match <code>^[^@]</code></span></td>
       </tr>
       <tr>
         <td><code>examples</code></td>
@@ -389,12 +389,12 @@
       <tr>
         <td id="prefixName"><code>prefixName</code></td>
         <td>string</td>
-        <td>—<br><span class="dim">matches <code>^[A-Za-z_][A-Za-z0-9_.-]*$</code></span></td>
+        <td>A prefix a compact IRI may use. Declared here so the schema reference documents the key shape that <code>prefixes</code> enforces.<br><span class="dim">matches <code>^[A-Za-z_][A-Za-z0-9_.-]*$</code></span></td>
       </tr>
       <tr>
         <td id="termKey"><code>termKey</code></td>
         <td>string</td>
-        <td>—<br><span class="dim">at least 1 character(s); must not match <code>^@</code></span></td>
+        <td>A JSON key a term may map. Any non-empty string that does not begin with <code>@</code>, because a key beginning with <code>@</code> is a JSON-LD keyword position.<br><span class="dim">matches <code>^[^@]</code></span></td>
       </tr>
       <tr>
         <td id="iri"><code>iri</code></td>

@@ -12,6 +12,7 @@ import type { Finding } from '../findings/finding.js'
 import {
   isAbsoluteIri,
   isKeyword,
+  isLegalPrefixName,
   isWellFormedLanguageTag,
   resolveIri,
   splitCompactIri,
@@ -202,6 +203,18 @@ export function resolveModel(source: SourceIndex, _options: ResolveOptions = {})
     } else {
       for (const [name, value] of Object.entries(prefixesRaw as Record<string, unknown>)) {
         const p = pointerChild(prefixesPointer, name)
+        // The name, before the value: a prefix that cannot appear on the left of
+        // a compact IRI is unusable however well-formed its IRI is.
+        if (!isLegalPrefixName(name)) {
+          findings.raise(
+            'L0.schema-violation',
+            source,
+            p,
+            `"${name}" is not a usable prefix name. A prefix begins with a letter or underscore and continues with letters, digits, "_", "." or "-".`,
+            { subject: name },
+          )
+          continue
+        }
         if (typeof value !== 'string') {
           findings.raise(
             'L0.schema-violation',
