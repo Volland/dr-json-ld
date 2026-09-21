@@ -30,8 +30,17 @@ export interface Skill {
   body: string
 }
 
-/** The source tree: `skills/<name>/skill.md`, one directory per skill. */
-const SKILLS_DIR = fileURLToPath(new URL('../../skills/', import.meta.url))
+/**
+ * The source tree: `skills/<name>/skill.md`, one directory per skill.
+ *
+ * Resolved on first use, not at module load. Core's index re-exports this
+ * module, so it is inlined into the VS Code extension's CommonJS bundle, where
+ * `import.meta.url` is undefined; resolving it eagerly there throws while the
+ * extension activates and leaves every command unregistered.
+ */
+function skillsDir(): string {
+  return fileURLToPath(new URL('../../skills/', import.meta.url))
+}
 
 /**
  * A skill file opens with a minimal header — `summary:` and `commands:` — and
@@ -75,13 +84,14 @@ let cached: readonly Skill[] | undefined
 /** Every skill this build carries, in a stable order. */
 export function loadSkills(): readonly Skill[] {
   if (cached) return cached
-  const names = readdirSync(SKILLS_DIR, { withFileTypes: true })
+  const dir = skillsDir()
+  const names = readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort()
 
   cached = names.map((name) =>
-    parseSkill(name, readFileSync(`${SKILLS_DIR}${name}/skill.md`, 'utf8')),
+    parseSkill(name, readFileSync(`${dir}${name}/skill.md`, 'utf8')),
   )
   return cached
 }

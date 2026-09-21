@@ -5,7 +5,7 @@
  * This package never imports `vscode`.
  * @lat: [[architecture#Architecture#Package Boundary]]
  */
-export const CORE_VERSION = '0.3.0'
+export const CORE_VERSION = '0.3.1'
 
 // ---- findings --------------------------------------------------------------
 export {

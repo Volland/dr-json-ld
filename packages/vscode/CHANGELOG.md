@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-09-21
+
+### Fixed — every command reported "not found"
+
+In 0.3.0 the extension failed while loading, so Open Canvas, New Project, New
+Model and Backfill Element Ids all failed with "command not found" even though
+the command palette listed them. They work again, and the build now refuses to
+package an extension that cannot load.
+
 ## [0.3.0] — 2026-09-20
 
 ### Fixed — the schema now actually reaches your editor

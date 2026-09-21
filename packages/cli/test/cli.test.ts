@@ -215,6 +215,15 @@ describe('ldm import', () => {
     expect(out.join('\n')).toContain('class')
   })
 
+  it('reads back a context this tool emitted, header and all', async () => {
+    const { root, io } = workspace({ 'm.jsonld.yaml': CLEAN_MODEL })
+    expect(await run(['emit', 'm.jsonld.yaml', '--out', 'out'], io)).toBe(EXIT_OK)
+    expect(readFileSync(join(root, 'out', 'm.jsonld'), 'utf8')).toMatch(/^\/\/ Generated/)
+
+    expect(await run(['import', 'out/m.jsonld', '--out', 'back.jsonld.yaml'], io)).toBe(EXIT_OK)
+    expect(readFileSync(join(root, 'back.jsonld.yaml'), 'utf8')).toContain('name:')
+  })
+
   it('exits 2 when the context is not JSON', async () => {
     const { io, err } = workspace({ 'core.jsonld': 'not json' })
     expect(await run(['import', 'core.jsonld'], io)).toBe(EXIT_USAGE)

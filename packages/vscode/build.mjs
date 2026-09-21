@@ -36,6 +36,27 @@ await build({
 })
 
 /**
+ * The bundle must load. Anything that throws at module scope — `import.meta.url`
+ * is undefined in CommonJS, for one — fails activation, and the editor then
+ * reports every command as "not found" with no hint why. Loading it here
+ * against an inert `vscode` turns that into a build failure.
+ */
+{
+  const Module = require('node:module')
+  const load = Module._load
+  const inert = new Proxy(function () {}, { get: () => inert, apply: () => inert, construct: () => inert })
+  Module._load = function (request, ...rest) {
+    return request === 'vscode' ? inert : load.call(this, request, ...rest)
+  }
+  try {
+    const extension = require(new URL('dist/extension.cjs', import.meta.url).pathname)
+    if (typeof extension.activate !== 'function') throw new Error('dist/extension.cjs exports no activate()')
+  } finally {
+    Module._load = load
+  }
+}
+
+/**
  * The canvas. A webview is a sandboxed iframe with no module loader and no
  * network, so this has to be one self-contained IIFE.
  */

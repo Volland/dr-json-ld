@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-09-21
+
+### Fixed — the 0.3.0 extension registered no commands
+
+Every command — Open Canvas, New Project, New Model, Backfill Element Ids —
+failed with "command 'jsonldModeler.…' not found". The authoring skills added in
+0.3.0 resolved their directory from `import.meta.url` when the module loaded.
+Core is inlined into the extension's CommonJS bundle, where that value is
+undefined, so loading the extension threw before any command was registered. The
+palette still listed them, because it reads the manifest.
+
+The directory is now resolved on first use, and the extension build loads its own
+bundle and fails if doing so throws, so a module-scope crash can no longer ship.
+All four commands were run in a real editor against the packaged extension before
+this release.
+
+### Fixed — `ldm import` read back nothing `ldm emit` wrote
+
+An emitted context opens with `//` header lines, and `import` parsed it as strict
+JSON, so the tool refused its own output. It now strips those lines first, as the
+publish resolver already did.
+
 ## [0.3.0] — 2026-09-20
 
 ### Fixed — the published schema never reached your editor

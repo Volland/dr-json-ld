@@ -274,6 +274,8 @@ The extension bundle inlines core so that it is self-contained. The CLI does not
 
 `tsc` is the typechecker, not the packager. It emits ESM with a bare import of `@json-ld-modeler/core`, and the extension host loads CommonJS and has no way to resolve a workspace package, so the shipped artifact is produced by `packages/vscode/build.mjs`: one CommonJS bundle with core inlined, and one self-contained IIFE for the canvas. A webview is a sandboxed iframe with no module loader, so the canvas cannot be anything else.
 
+The build then loads the CommonJS bundle against an inert `vscode` and fails if it throws. Inlining core means core's module scope runs inside the extension host, where `import.meta.url` is undefined; 0.3.0 shipped resolving the skills directory eagerly, activation threw, and every command reported "not found". Core therefore resolves file paths on first use, never at module load.
+
 `vsce` therefore runs with `--no-dependencies`, and `.vscodeignore` keeps the tsc output, the sources and the build tooling out of the `.vsix`. What ships is the two bundles, the icon, the two JSON Schemas and the three documents the Marketplace renders.
 
 The Marketplace icon must be a PNG, so the artwork in `packages/vscode/media/` is authored as SVG and rasterized from it. The mark draws its letterforms as paths rather than setting them as text, because a logo that depended on a font being installed would render differently on whichever machine happened to build it.

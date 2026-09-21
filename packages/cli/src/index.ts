@@ -374,9 +374,11 @@ function importCommand(parsed: Parsed, io: Io): number {
   const absolute = isAbsolute(path) ? path : resolve(io.cwd(), path)
   if (!io.exists(absolute)) throw new UsageError(`${path} does not exist`)
 
+  // A context this tool emitted opens with `//` header lines; it has to read
+  // its own output back. No line of strict JSON starts with `//`.
   let document: unknown
   try {
-    document = JSON.parse(io.readFile(absolute))
+    document = JSON.parse(stripComments(io.readFile(absolute)))
   } catch (error) {
     throw new UsageError(
       `${path} is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
