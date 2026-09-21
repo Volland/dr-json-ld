@@ -72,11 +72,8 @@ shapes:
     fields:
       name: { min: 1, max: 1 }
 
-examples:
-  - id: exc001
-    path: documents/credential-ok.json
-    note: A degree credential that satisfies every shape.
-    expect: { ok: true, maxSeverity: info }
+# Examples live beside the credential fixture; this file is about the schema.
+examples: []
 
 views:
   - id: vwc001

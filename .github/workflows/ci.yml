@@ -36,6 +36,9 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      # The CLI and extension tests import `@json-ld-modeler/core` through its
+      # package entry, which is the built `dist/`, so core must be built first.
+      - run: npm run build
 
       # `lat.md/processing#Processing#Context Resolution#Offline by default`:
       # every command except `ldm vendor` runs with no network. The test job
