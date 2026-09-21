@@ -34,8 +34,10 @@ as visibly absent on the other, rather than as nothing.
 
 ### Findings that point at your file
 
-Validation runs a ladder — L0 well-formedness, L1 context errors, L2 lossiness —
-and every finding lands in the Problems panel at a line you wrote:
+Validation runs a ladder — L0 well-formedness, L1 context errors, L2 lossiness,
+and L3 shape conformance when the model declares shapes — and every finding lands
+in the Problems panel at a line you wrote, or at the key in the example document
+that broke a shape:
 
 | | |
 | --- | --- |
@@ -45,6 +47,16 @@ and every finding lands in the Problems panel at a line you wrote:
 
 Context errors are reported **at the term in your model**, never at a position in
 a generated artifact you did not write.
+
+### Shapes, built as a table
+
+A scoped context is made of real terms you can select, edit and rename, so a
+credential's protected type-scoped context is no longer an opaque blob. Add a
+shape and the inspector shows it as a field table — key, range, cardinality, and
+the coercion of the term behind each key — while the tree pane draws the JSON a
+conforming document takes. When two classes need a key read differently, the
+canvas offers to give one of them its own term in its type-scoped context, and
+asks rather than changing the shared term.
 
 ### Editing that does not reformat your file
 
@@ -164,15 +176,13 @@ the input that produced it — and no library exposes that.
 Conformance is therefore observed rather than claimed. The W3C JSON-LD 1.1 test
 suite is vendored and run with the network off, and every in-scope case is
 additionally run through `jsonld.js` with the outputs compared. Cases that do not
-pass are listed with a reason; `frame`, `toRdf`, `fromRdf`, `flatten` and `html`
-are out of scope for this release and are reported as such rather than skipped
-silently.
+pass are listed with a reason; `frame`, `fromRdf`, `flatten` and `html` are out
+of scope for this release and are reported as such rather than skipped silently.
 
 ## Not in this release
 
-The shapes layer and everything that consumes it — SHACL, framing, JSON Schema,
-the vocabulary document, generated types. Validation L3 and L4. RDF to JSON-LD
-conversion.
+Framing, JSON Schema, the vocabulary document, generated types. The
+instance-graph overlay. Validation L4. RDF to JSON-LD conversion.
 
 Deferred is not cancelled: each is reachable from the current design, and the
 design record in `lat.md/` says how.

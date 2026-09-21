@@ -70,6 +70,14 @@ function candidates(model: unknown): Array<{ what: string; value: unknown }> {
     out.push({ what: `the prefix name "${key}"`, value: key })
     out.push({ what: `the prefix "${key}"`, value })
   }
+  const shapes = (model as { shapes?: Record<string, { fields?: Record<string, unknown> }> } | null)
+    ?.shapes
+  for (const [name, shape] of Object.entries(shapes ?? {})) {
+    out.push({ what: `the shape "${name}"`, value: shape })
+    for (const [key, field] of Object.entries(shape?.fields ?? {})) {
+      out.push({ what: `the field "${name}.${key}"`, value: field })
+    }
+  }
   return out
 }
 

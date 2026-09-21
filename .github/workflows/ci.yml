@@ -39,15 +39,15 @@ jobs:
 
       # `lat.md/processing#Processing#Context Resolution#Offline by default`:
       # every command except `ldm vendor` runs with no network. The test job
-      # proves it rather than asserting it — outbound traffic is dropped, so a
-      # test that reaches for the network fails here instead of passing quietly.
-      - name: Disable outbound network
-        run: |
-          sudo iptables -P OUTPUT DROP
-          sudo iptables -A OUTPUT -o lo -j ACCEPT
-      - run: npm run test
-        env:
-          LDM_NETWORK_DISABLED: '1'
+      # proves it rather than asserting it — the tests run where there is no
+      # network, so a test that reaches for it fails here instead of passing
+      # quietly. The first step proves the sandbox is actually closed.
+      - name: The offline shell has no network
+        shell: bash scripts/offline.sh {0}
+        run: "! curl -sS --max-time 5 https://registry.npmjs.org/ > /dev/null"
+      - name: Run the tests with no network
+        shell: bash scripts/offline.sh {0}
+        run: npm run test
 
   fixtures:
     runs-on: ubuntu-latest
@@ -78,12 +78,10 @@ jobs:
           done
 
       # Every fixture model resolves, emits both targets, and every example
-      # meets its declared outcome — with the network off.
-      - name: Disable outbound network
-        run: |
-          sudo iptables -P OUTPUT DROP
-          sudo iptables -A OUTPUT -o lo -j ACCEPT
+      # meets its declared outcome — with the network off. Each step from here
+      # on runs in scripts/offline.sh, which gives it no network at all.
       - name: Check every fixture model
+        shell: bash scripts/offline.sh {0}
         run: |
           for model in packages/core/test/fixtures/models/*.jsonld.yaml; do
             node packages/cli/dist/bin.js check "$model"
@@ -96,6 +94,7 @@ jobs:
       # is already dropped, so a `skill` verb that grew a download would fail
       # here instead of working quietly on a developer's machine.
       - name: Installing skills reaches no network
+        shell: bash scripts/offline.sh {0}
         run: |
           node packages/cli/dist/bin.js skill list
           node packages/cli/dist/bin.js skill install --user
@@ -107,6 +106,7 @@ jobs:
       # is what a pull request does. A constraint only one of the two enforces
       # is the disagreement the corpus exists to prevent.
       - name: Every rejected model fails the command
+        shell: bash scripts/offline.sh {0}
         run: |
           for model in packages/core/test/fixtures/schema/reject/*.jsonld.yaml; do
             if node packages/cli/dist/bin.js check "$model" > /dev/null 2>&1; then
@@ -120,6 +120,7 @@ jobs:
       # request runs. An over-strict constraint is the failure nobody writes a
       # test for, because nobody writes a case for what they never tried.
       - name: Every accepted model passes the command
+        shell: bash scripts/offline.sh {0}
         run: |
           for model in packages/core/test/fixtures/schema/accept/*.jsonld.yaml; do
             node packages/cli/dist/bin.js check "$model"
@@ -127,17 +128,20 @@ jobs:
 
       # The emitted context must be regenerable: a hand edit to a generated
       # artifact is caught in review rather than in production.
-      - run: npx vitest run packages/core/test/fixtures.test.ts
+      - shell: bash scripts/offline.sh {0}
+        run: npx vitest run packages/core/test/fixtures.test.ts
 
       # Every fixture project checks, every version verifies, and republishing
       # is a no-op — so the committed tree is exactly what publishing produces.
       - name: Check every fixture project
+        shell: bash scripts/offline.sh {0}
         run: |
           for project in packages/core/test/fixtures/projects/*/ldm.project.yaml; do
             dir=$(dirname "$project")
             ( cd "$dir" && node "$GITHUB_WORKSPACE/packages/cli/dist/bin.js" check )
           done
-      - run: npx vitest run packages/core/test/versioned-project.test.ts
+      - shell: bash scripts/offline.sh {0}
+        run: npx vitest run packages/core/test/versioned-project.test.ts
 
   docs:
     runs-on: ubuntu-latest

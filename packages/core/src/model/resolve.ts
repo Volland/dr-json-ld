@@ -18,7 +18,8 @@ import {
   splitCompactIri,
 } from '../iri/iri.js'
 import { SourceIndex } from '../source/index-file.js'
-import { pointerChild, pointerRoot, type JsonPointer } from '../source/pointer.js'
+import { pointerChild, pointerRoot, pointerTokens, type JsonPointer } from '../source/pointer.js'
+import { resolveShapeFields } from '../shapes/fields.js'
 import { deriveElementId, isElementId } from './element-id.js'
 import {
   CONTAINER_VALUES,
@@ -27,6 +28,10 @@ import {
   type InlineContext,
   type Ir,
   type IrExample,
+  type IrField,
+  type IrRange,
+  type IrScopedContext,
+  type IrShape,
   type IrTerm,
   type IrUses,
   type IrView,
@@ -331,22 +336,25 @@ export function resolveModel(source: SourceIndex, _options: ResolveOptions = {})
     )
   } else {
     for (const [key, raw] of Object.entries(termsRaw as Record<string, unknown>)) {
+      const scoped: IrTerm[] = []
       const term = resolveTerm(
         key,
         raw,
         pointerChild(termsPointer, key),
-        { prefixes: resolving, vocab, namespace, mode },
+        { prefixes: resolving, vocab, namespace, mode, enclosing: [] },
         source,
         findings,
         takenIds,
+        scoped,
       )
-      if (term) terms.push(term)
+      if (term) terms.push(term, ...scoped)
     }
   }
 
   // A duplicate key does not survive YAML's own mapping, so it is detected on
   // the token stream rather than on the parsed value.
   reportDuplicateTermKeys(source, termsPointer, findings)
+  reportDuplicateScopedKeys(source, findings)
 
   // ---- examples ----------------------------------------------------------
   const examples: IrExample[] = []
@@ -366,6 +374,16 @@ export function resolveModel(source: SourceIndex, _options: ResolveOptions = {})
   } else if (examplesRaw !== undefined && examplesRaw !== null) {
     findings.raise('L0.schema-violation', source, examplesPointer, '`examples` must be a sequence.')
   }
+
+  // ---- shapes ------------------------------------------------------------
+  const shapes = resolveShapes(model['shapes'], {
+    terms,
+    prefixes: resolving,
+    vocab,
+    source,
+    findings,
+    takenIds,
+  })
 
   // ---- views -------------------------------------------------------------
   const views: IrView[] = []
@@ -388,6 +406,19 @@ export function resolveModel(source: SourceIndex, _options: ResolveOptions = {})
       const declared = Array.isArray(v['terms'])
         ? (v['terms'] as unknown[]).filter((t): t is string => typeof t === 'string')
         : []
+      const declaredShapes = Array.isArray(v['shapes'])
+        ? (v['shapes'] as unknown[]).filter((t): t is string => typeof t === 'string')
+        : undefined
+      for (const shapeName of declaredShapes ?? []) {
+        if (shapes.some((shape) => shape.name === shapeName)) continue
+        findings.raise(
+          'L0.view-unknown-shape',
+          source,
+          pointerChild(p, 'shapes'),
+          `The view "${name}" names the shape "${shapeName}", which this model does not declare.`,
+          { subject: shapeName },
+        )
+      }
       // A view names terms of exactly one model. A name the model does not
       // declare is a term that will never appear on any diagram, which is the
       // opposite of what a view is for.
@@ -407,6 +438,7 @@ export function resolveModel(source: SourceIndex, _options: ResolveOptions = {})
         name,
         ...(typeof v['note'] === 'string' ? { note: v['note'] as string } : {}),
         terms: declared,
+        ...(declaredShapes !== undefined ? { shapes: declaredShapes } : {}),
         pointer: p,
       })
     })
@@ -424,10 +456,15 @@ export function resolveModel(source: SourceIndex, _options: ResolveOptions = {})
     prefixes,
     uses,
     terms,
+    shapes,
     examples,
     views,
     source: source.path,
   }
+  // Field keys resolve the way a processor resolves them, which needs the IR's
+  // own context; referenced contexts are consulted later, where they are
+  // available (see `resolveShapeFields`).
+  ir.shapes = resolveShapeFields(ir)
 
   return { ir, findings: findings.all(), source }
 }
@@ -437,6 +474,16 @@ interface TermScope {
   vocab: string | undefined
   namespace: { prefix: string; base: string }
   mode: ProcessingMode
+  /**
+   * The keys of the terms whose `@context` maps enclose this one, outermost
+   * first. Empty for a top-level term.
+   */
+  enclosing: string[]
+}
+
+/** Keyword entries a scoped context map may carry as settings rather than terms. */
+function isContextSetting(key: string): boolean {
+  return key.startsWith('@')
 }
 
 function resolveTerm(
@@ -447,7 +494,13 @@ function resolveTerm(
   source: SourceIndex,
   findings: FindingCollector,
   takenIds: Set<string>,
+  scopedOut: IrTerm[],
+  parentId?: string,
 ): IrTerm | undefined {
+  const isScoped = scope.enclosing.length > 0
+  // Inside a scoped context a term definition may be written the way a context
+  // writes it: a bare IRI, or null to decouple the key.
+  if (isScoped && (raw === null || typeof raw === 'string')) raw = { '@id': raw }
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
     findings.raise(
       'L0.schema-violation',
@@ -459,11 +512,17 @@ function resolveTerm(
     return undefined
   }
   const def = raw as Record<string, unknown>
-  const identity = identityOf(def['id'], 'term', key, pointer, source, findings, takenIds)
+  // A scoped term's derived id folds in the keys enclosing it, so `name` under
+  // `publisher` and the top-level `name` are two elements, not a collision.
+  const identity = identityOf(def['id'], 'term', key, pointer, source, findings, takenIds, [
+    ...scope.enclosing,
+    key,
+  ])
 
   const term: IrTerm = {
     ...identity,
     key,
+    ...(parentId !== undefined ? { scope: { parent: parentId } } : {}),
     iri: null,
     pointer,
   }
@@ -540,10 +599,14 @@ function resolveTerm(
   }
 
   // Neither @id nor @reverse: the IRI comes from @vocab, or from the model's own
-  // namespace, which is what makes a bare term declaration useful.
+  // namespace, which is what makes a bare term declaration useful. A scoped term
+  // has no namespace fallback: it is emitted as written, and a processor reads
+  // an `@id`-less definition against `@vocab` alone.
   if (!('@id' in def) && !('@reverse' in def)) {
     if (scope.vocab) {
       term.iri = scope.vocab + key
+    } else if (isScoped) {
+      term.iri = null
     } else if (scope.namespace.base) {
       term.iri = scope.namespace.base + key
     } else {
@@ -722,10 +785,22 @@ function resolveTerm(
     }
   }
 
-  // @context — the scoped context, recorded on the IR as attached to this term.
+  // @context — the scoped context. A map is resolved into scoped terms of their
+  // own; an IRI, an array or null stays a reference, recorded as written.
   if ('@context' in def) {
     const value = def['@context']
-    if (isInlineContext(value)) {
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      term.scopedContext = resolveScopedContext(
+        term,
+        value as Record<string, unknown>,
+        pointerChild(pointer, '@context'),
+        scope,
+        source,
+        findings,
+        takenIds,
+        scopedOut,
+      )
+    } else if (isInlineContext(value)) {
       term['@context'] = value
     } else {
       findings.raise(
@@ -755,8 +830,9 @@ function resolveTerm(
 
   if (typeof def['note'] === 'string') term.note = def['note'] as string
 
-  // Mode-1.0 downgrades on the remaining facets.
-  if (scope.mode === '1.0') {
+  // Mode-1.0 downgrades on the remaining facets. A scoped term's facets are
+  // inert under 1.0 already — its enclosing `@context` is the downgrade.
+  if (scope.mode === '1.0' && !isScoped) {
     for (const facet of FACETS_ONLY_IN_1_1) {
       if (facet in def) {
         findings.raise(
@@ -801,6 +877,405 @@ const KNOWN_TERM_KEYS = new Set([
   '@prefix',
   '@index',
 ])
+
+/**
+ * Resolve a map-valued scoped context: keyword entries become settings, every
+ * other entry a scoped term whose parent is `owner`. Scoped terms are appended
+ * to `out` in declaration order, each followed by its own scoped terms.
+ */
+function resolveScopedContext(
+  owner: IrTerm,
+  map: Record<string, unknown>,
+  pointer: JsonPointer,
+  scope: TermScope,
+  source: SourceIndex,
+  findings: FindingCollector,
+  takenIds: Set<string>,
+  out: IrTerm[],
+): IrScopedContext {
+  const settings: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(map)) {
+    if (isContextSetting(key)) settings[key] = value
+  }
+
+  // Inside the map, a sibling that names a namespace is usable as a prefix, as
+  // it would be to a processor, and `@vocab` replaces the outer one.
+  const prefixes = { ...scope.prefixes }
+  for (const [key, value] of Object.entries(map)) {
+    if (isContextSetting(key) || key.includes(':')) continue
+    const iri =
+      typeof value === 'string'
+        ? value
+        : value !== null && typeof value === 'object' && !Array.isArray(value)
+          ? (value as Record<string, unknown>)['@id']
+          : undefined
+    if (typeof iri === 'string' && isAbsoluteIri(iri) && /[/#:?[\]@]$/.test(iri)) {
+      prefixes[key] = iri
+    }
+  }
+  let vocab = scope.vocab
+  if (typeof settings['@vocab'] === 'string') {
+    vocab = expandModelIri(
+      settings['@vocab'] as string,
+      prefixes,
+      scope.vocab,
+      source,
+      pointerChild(pointer, '@vocab'),
+      findings,
+    )
+  } else if (settings['@vocab'] === null) {
+    vocab = undefined
+  }
+
+  const inner: TermScope = {
+    ...scope,
+    prefixes,
+    vocab,
+    enclosing: [...scope.enclosing, owner.key],
+  }
+  for (const [key, raw] of Object.entries(map)) {
+    if (isContextSetting(key)) continue
+    const nested: IrTerm[] = []
+    const term = resolveTerm(
+      key,
+      raw,
+      pointerChild(pointer, key),
+      inner,
+      source,
+      findings,
+      takenIds,
+      nested,
+      owner.id,
+    )
+    if (term) out.push(term, ...nested)
+  }
+  return { settings }
+}
+
+interface ShapesScope {
+  terms: IrTerm[]
+  prefixes: Record<string, string>
+  vocab: string | undefined
+  source: SourceIndex
+  findings: FindingCollector
+  takenIds: Set<string>
+}
+
+const SHAPE_KEYS = new Set(['id', 'targetClass', 'closed', 'note', 'fields'])
+const FIELD_KEYS = new Set(['min', 'max', 'range', 'note'])
+const SIMPLE_RANGES = new Set(['iri', 'node', 'literal', 'langString'])
+
+/**
+ * The shapes layer, structurally: every shape with its target and fields. What
+ * a field key *means* is settled afterwards against the model's own context,
+ * because a key resolves the way a processor would resolve it under the target
+ * class, not by looking it up here.
+ */
+function resolveShapes(raw: unknown, scope: ShapesScope): IrShape[] {
+  const { source, findings } = scope
+  const shapesPointer = pointerChild(pointerRoot(), 'shapes')
+  if (raw === undefined || raw === null) return []
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    findings.raise(
+      'L0.schema-violation',
+      source,
+      shapesPointer,
+      '`shapes` must be a map from shape name to shape.',
+    )
+    return []
+  }
+
+  const shapes: IrShape[] = []
+  for (const [name, value] of Object.entries(raw as Record<string, unknown>)) {
+    const pointer = pointerChild(shapesPointer, name)
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+      findings.raise(
+        'L0.schema-violation',
+        source,
+        pointer,
+        `The shape "${name}" must be a mapping.`,
+        { subject: name },
+      )
+      continue
+    }
+    const def = value as Record<string, unknown>
+    for (const key of Object.keys(def)) {
+      if (SHAPE_KEYS.has(key)) continue
+      findings.raise(
+        'L0.schema-violation',
+        source,
+        pointerChild(pointer, key),
+        `\`${key}\` is not something a shape declares. A shape has \`targetClass\`, \`closed\`, \`note\` and \`fields\`.`,
+        { subject: name },
+      )
+    }
+    const identity = identityOf(def['id'], 'shape', name, pointer, source, findings, scope.takenIds)
+
+    // A shape without a target applies only where a field's range names it —
+    // an untyped nested node, such as a credential's subject.
+    const target = typeof def['targetClass'] === 'string' ? (def['targetClass'] as string) : ''
+    if (def['targetClass'] !== undefined && !target) {
+      findings.raise(
+        'L0.schema-violation',
+        source,
+        pointerChild(pointer, 'targetClass'),
+        `\`targetClass\` on shape "${name}" must name a class term of this model, or a class IRI.`,
+        { subject: name },
+      )
+    }
+    const resolvedTarget = target
+      ? resolveClassReference(target, scope, pointerChild(pointer, 'targetClass'), 'L1.shape-unknown-target', `The target class "${target}" of shape "${name}"`)
+      : { iri: null }
+
+    let closed = false
+    if (def['closed'] !== undefined) {
+      if (typeof def['closed'] === 'boolean') closed = def['closed']
+      else {
+        findings.raise(
+          'L0.schema-violation',
+          source,
+          pointerChild(pointer, 'closed'),
+          '`closed` must be true or false.',
+          { subject: name },
+        )
+      }
+    }
+
+    const fields: IrField[] = []
+    const fieldsRaw = def['fields']
+    const fieldsPointer = pointerChild(pointer, 'fields')
+    if (fieldsRaw !== undefined && fieldsRaw !== null) {
+      if (typeof fieldsRaw !== 'object' || Array.isArray(fieldsRaw)) {
+        findings.raise(
+          'L0.schema-violation',
+          source,
+          fieldsPointer,
+          '`fields` must be a map from JSON key to field.',
+          { subject: name },
+        )
+      } else {
+        for (const [key, fieldRaw] of Object.entries(fieldsRaw as Record<string, unknown>)) {
+          const field = resolveField(key, fieldRaw, pointerChild(fieldsPointer, key), scope)
+          if (field) fields.push(field)
+        }
+      }
+    }
+
+    shapes.push({
+      ...identity,
+      name,
+      ...(target ? { target } : {}),
+      targetIri: resolvedTarget.iri,
+      ...(resolvedTarget.termId !== undefined ? { targetTermId: resolvedTarget.termId } : {}),
+      closed,
+      ...(typeof def['note'] === 'string' ? { note: def['note'] as string } : {}),
+      fields,
+      pointer,
+    })
+  }
+
+  // A shape range names a shape by its key, and the shapes are all known now.
+  for (const shape of shapes) {
+    for (const field of shape.fields) {
+      if (field.range?.kind !== 'shape') continue
+      const named = shapes.find((s) => s.name === (field.range as { shape: string }).shape)
+      if (named) {
+        field.range = { ...field.range, shapeId: named.id }
+        continue
+      }
+      findings.raise(
+        'L1.shape-unknown-shape',
+        source,
+        pointerChild(field.pointer, 'range'),
+        `The field "${field.key}" of shape "${shape.name}" names the shape "${field.range.shape}", which this model does not declare.`,
+        { subject: field.range.shape },
+      )
+    }
+  }
+
+  // A repeated shape name or field key is gone from the parsed value.
+  for (const duplicate of source.duplicateKeys) {
+    const tokens = pointerTokens(duplicate.pointer)
+    const isShape = tokens.length === 2 && tokens[0] === 'shapes'
+    const isField = tokens.length === 4 && tokens[0] === 'shapes' && tokens[2] === 'fields'
+    if (!isShape && !isField) continue
+    findings.add({
+      ruleId: 'L0.schema-violation',
+      level: 'L0',
+      severity: 'error',
+      message: isShape
+        ? `The shape "${tokens[1]}" is declared twice.`
+        : `The field "${tokens[3]}" is declared twice in shape "${tokens[1]}".`,
+      pointer: duplicate.pointer,
+      file: source.path,
+      loc: duplicate.key.from,
+      subject: tokens[tokens.length - 1]!,
+    })
+  }
+
+  return shapes
+}
+
+function resolveField(
+  key: string,
+  raw: unknown,
+  pointer: JsonPointer,
+  scope: ShapesScope,
+): IrField | undefined {
+  const { source, findings } = scope
+  // `issuer:` with nothing under it is a field that constrains nothing yet.
+  const def: Record<string, unknown> =
+    raw === null || raw === undefined ? {} : (raw as Record<string, unknown>)
+  if (typeof def !== 'object' || Array.isArray(def)) {
+    findings.raise(
+      'L0.schema-violation',
+      source,
+      pointer,
+      `The field "${key}" must be a mapping of \`min\`, \`max\`, \`range\` and \`note\`.`,
+      { subject: key },
+    )
+    return undefined
+  }
+  for (const k of Object.keys(def)) {
+    if (FIELD_KEYS.has(k)) continue
+    findings.raise(
+      'L0.schema-violation',
+      source,
+      pointerChild(pointer, k),
+      `\`${k}\` is not something a field declares. A field has \`min\`, \`max\`, \`range\` and \`note\`.`,
+      { subject: key },
+    )
+  }
+
+  const field: IrField = { key, termId: null, iri: null, inverse: false, pointer }
+  const min = def['min']
+  if (min !== undefined) {
+    if (typeof min === 'number' && Number.isInteger(min) && min >= 0) field.min = min
+    else {
+      findings.raise(
+        'L0.schema-violation',
+        source,
+        pointerChild(pointer, 'min'),
+        `\`min\` on field "${key}" must be a non-negative integer.`,
+        { subject: key },
+      )
+    }
+  }
+  const max = def['max']
+  if (max !== undefined) {
+    if (typeof max === 'number' && Number.isInteger(max) && max >= 1) field.max = max
+    else {
+      findings.raise(
+        'L0.schema-violation',
+        source,
+        pointerChild(pointer, 'max'),
+        `\`max\` on field "${key}" must be a positive integer; leave it out for no maximum.`,
+        { subject: key },
+      )
+    }
+  }
+  if (field.min !== undefined && field.max !== undefined && field.min > field.max) {
+    findings.raise(
+      'L1.shape-cardinality-invalid',
+      source,
+      pointer,
+      `The field "${key}" requires at least ${field.min} values and allows at most ${field.max}; no document can satisfy both.`,
+      { subject: key },
+    )
+  }
+
+  if (def['range'] !== undefined) {
+    const range = resolveRange(def['range'], pointerChild(pointer, 'range'), key, scope)
+    if (range) field.range = range
+  }
+  if (typeof def['note'] === 'string') field.note = def['note'] as string
+  return field
+}
+
+function resolveRange(
+  raw: unknown,
+  pointer: JsonPointer,
+  key: string,
+  scope: ShapesScope,
+): IrRange | undefined {
+  const { source, findings } = scope
+  if (typeof raw === 'string') {
+    if (SIMPLE_RANGES.has(raw)) return { kind: raw as 'iri' | 'node' | 'literal' | 'langString' }
+    if (raw.includes(':')) {
+      const iri = expandModelIri(raw, scope.prefixes, undefined, source, pointer, findings, key)
+      return { kind: 'datatype', datatype: raw, iri }
+    }
+  } else if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+    const entries = Object.entries(raw as Record<string, unknown>)
+    if (entries.length === 1 && typeof entries[0]![1] === 'string') {
+      const [form, name] = entries[0] as [string, string]
+      if (form === 'shape') return { kind: 'shape', shape: name, shapeId: null }
+      if (form === 'class') {
+        const resolved = resolveClassReference(
+          name,
+          scope,
+          pointerChild(pointer, 'class'),
+          'L1.shape-unknown-class',
+          `The class "${name}" in the range of field "${key}"`,
+        )
+        return { kind: 'class', class: name, iri: resolved.iri }
+      }
+    }
+  }
+  findings.raise(
+    'L0.schema-violation',
+    source,
+    pointer,
+    `The range of field "${key}" must be \`iri\`, \`node\`, \`literal\`, \`langString\`, a datatype IRI such as \`xsd:dateTime\`, \`{ class: … }\` or \`{ shape: … }\`.`,
+    { subject: key },
+  )
+  return undefined
+}
+
+/**
+ * A class named by a shape: a top-level term of this model, or an IRI. A bare
+ * word that is not a term resolves against `@vocab`, as it would in a document's
+ * `@type`, and names nothing when there is none.
+ */
+function resolveClassReference(
+  value: string,
+  scope: ShapesScope,
+  pointer: JsonPointer,
+  rule: 'L1.shape-unknown-target' | 'L1.shape-unknown-class',
+  what: string,
+): { iri: string | null; termId?: string } {
+  const term = scope.terms.find((t) => t.key === value && t.scope === undefined)
+  if (term) return { iri: term.iri, termId: term.id }
+
+  let iri: string | null = null
+  const compact = splitCompactIri(value)
+  if (compact) {
+    const mapped = scope.prefixes[compact.prefix]
+    if (mapped !== undefined) iri = mapped + compact.suffix
+    else if (KNOWN_URI_SCHEMES.has(compact.prefix.toLowerCase()) && isAbsoluteIri(value)) iri = value
+  } else if (isAbsoluteIri(value)) {
+    // `https://…` is not a compact IRI — its suffix begins with `//` — but it is
+    // an IRI the author wrote deliberately.
+    iri = value
+  } else if (scope.vocab) {
+    iri = resolveIri(scope.vocab, value)
+  }
+
+  if (iri === null) {
+    scope.findings.raise(
+      rule,
+      scope.source,
+      pointer,
+      `${what} is neither a term of this model nor an IRI whose prefix is declared.`,
+      { subject: value },
+    )
+    return { iri: null }
+  }
+  // A class written as an IRI still finds its term, which is where a
+  // type-scoped context would live.
+  const byIri = scope.terms.find((t) => t.scope === undefined && t.iri === iri)
+  return byIri ? { iri, termId: byIri.id } : { iri }
+}
 
 function downgradeConsequence(facet: string): string {
   switch (facet) {
@@ -935,6 +1410,7 @@ function identityOf(
   source: SourceIndex,
   findings: FindingCollector,
   takenIds: Set<string>,
+  derivedFrom: readonly string[] = [key],
 ): { id: string; idWritten: boolean } {
   if (raw !== undefined && raw !== null) {
     const written = String(raw)
@@ -959,7 +1435,7 @@ function identityOf(
       return { id: written, idWritten: true }
     }
   }
-  const derived = deriveElementId(kind, key)
+  const derived = deriveElementId(kind, derivedFrom.join(String.fromCharCode(0)))
   takenIds.add(derived)
   return { id: derived, idWritten: false }
 }
@@ -993,6 +1469,35 @@ function reportDuplicateTermKeys(
     }
     seen.add(key)
   }
+}
+
+/**
+ * A key repeated inside one scoped context map. One key means one thing within
+ * a map; the same key in two maps is two terms and is not reported.
+ */
+function reportDuplicateScopedKeys(source: SourceIndex, findings: FindingCollector): void {
+  for (const duplicate of source.duplicateKeys) {
+    const tokens = pointerTokens(duplicate.pointer)
+    if (!isScopedTermPath(tokens)) continue
+    const key = tokens[tokens.length - 1]!
+    findings.add({
+      ruleId: 'L0.duplicate-term-key',
+      level: 'L0',
+      severity: 'error',
+      message: `Scoped term "${key}" is declared twice in one scoped context. One key means one thing within a context.`,
+      pointer: duplicate.pointer,
+      file: source.path,
+      loc: duplicate.key.from,
+      subject: key,
+    })
+  }
+}
+
+/** `terms/<key>/@context/<key>(/@context/<key>)*` */
+function isScopedTermPath(tokens: readonly string[]): boolean {
+  if (tokens.length < 4 || tokens.length % 2 !== 0 || tokens[0] !== 'terms') return false
+  for (let i = 2; i < tokens.length; i += 2) if (tokens[i] !== '@context') return false
+  return !isContextSetting(tokens[tokens.length - 1]!)
 }
 
 /**

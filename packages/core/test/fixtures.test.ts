@@ -150,7 +150,9 @@ describe('the catalogue fixture', () => {
 
   it('declares a scoped context', () => {
     const { ir } = load(NAME)
-    expect(ir!.terms.find((t) => t.key === 'detail')!['@context']).toBeDefined()
+    const detail = ir!.terms.find((t) => t.key === 'detail')!
+    expect(detail.scopedContext).toBeDefined()
+    expect(ir!.terms.some((t) => t.scope?.parent === detail.id)).toBe(true)
   })
 
   // @lat: [[validation#Validation#The Ladder#L2 Lossiness]]

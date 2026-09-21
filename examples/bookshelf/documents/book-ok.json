@@ -1,0 +1,13 @@
+{
+  "@id": "https://example.org/books/linked-shelf",
+  "@type": "Book",
+  "title": { "en": "The Linked Shelf", "de": "Das verlinkte Regal" },
+  "author": "https://example.org/people/ada",
+  "tags": ["json-ld", "rdf"],
+  "chapters": ["Keys", "Contexts", "Graphs"],
+  "published": "2026-09-01",
+  "publisher": {
+    "@id": "https://example.org/orgs/example-press",
+    "name": "Example Press GmbH"
+  }
+}

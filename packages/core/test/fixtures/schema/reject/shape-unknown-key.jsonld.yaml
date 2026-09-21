@@ -1,0 +1,14 @@
+# reject: shape
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  Person: { "@id": ex:Person }
+
+shapes:
+  Person:
+    targetClass: Person
+    required: [name]

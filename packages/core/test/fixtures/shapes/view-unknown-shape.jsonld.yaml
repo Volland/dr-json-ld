@@ -1,0 +1,15 @@
+# raises: L0.view-unknown-shape
+jsonld: "1"
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+mode: "1.1"
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+terms:
+  Person: { id: per001, "@id": ex:Person }
+views:
+  - id: vw0001
+    name: People
+    terms: [Person]
+    shapes: [Ghost]

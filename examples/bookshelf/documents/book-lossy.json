@@ -1,0 +1,6 @@
+{
+  "@id": "https://example.org/books/linked-shelf",
+  "@type": "Book",
+  "title": { "en": "The Linked Shelf" },
+  "writtenBy": "Ada"
+}

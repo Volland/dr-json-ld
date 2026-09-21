@@ -5,7 +5,6 @@ Cases: 246. Passed: 166. Failed: 69. Skipped: 11.
 ## Out of scope for this change
 
 - `frame` — not implemented by this milestone; reported rather than skipped silently.
-- `toRdf` — not implemented by this milestone; reported rather than skipped silently.
 - `fromRdf` — not implemented by this milestone; reported rather than skipped silently.
 - `flatten` — not implemented by this milestone; reported rather than skipped silently.
 - `html` — not implemented by this milestone; reported rather than skipped silently.

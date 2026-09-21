@@ -156,7 +156,7 @@ async function findModel(): Promise<vscode.TextDocument> {
  *
  * @lat: [[validation#Validation#Findings]]
  */
-function publishDiagnostics(
+export function publishDiagnostics(
   collection: vscode.DiagnosticCollection,
   document: vscode.TextDocument,
 ): void {

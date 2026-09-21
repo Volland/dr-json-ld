@@ -7,7 +7,7 @@
  *
  * @lat: [[emitters#Emitters#Context Target]]
  */
-import type { Ir, IrTerm } from '../model/ir.js'
+import { scopedTermsOf, topLevelTerms, type Ir, type IrTerm } from '../model/ir.js'
 
 export interface ContextDocument {
   '@context': unknown
@@ -48,8 +48,8 @@ export function buildOwnLayer(ir: Ir): Record<string, unknown> {
     layer[name] = iri
   }
 
-  for (const term of ir.terms) {
-    layer[term.key] = buildTermDefinition(term)
+  for (const term of topLevelTerms(ir)) {
+    layer[term.key] = buildTermDefinition(term, ir)
   }
 
   return layer
@@ -69,14 +69,17 @@ function usesPrefix(ir: Ir, prefix: string): boolean {
  * One term definition. Collapses to a bare IRI string when the term carries no
  * facet beyond `@id`, because that is the idiom and a diff of it reads better.
  */
-export function buildTermDefinition(term: IrTerm): unknown {
+export function buildTermDefinition(term: IrTerm, ir?: Ir): unknown {
   const definition: Record<string, unknown> = {}
 
   if (term['@reverse'] !== undefined) {
     definition['@reverse'] = term['@reverse']
   } else if (term['@id'] !== undefined) {
     definition['@id'] = term['@id']
-  } else if (term.iri !== null) {
+  } else if (term.iri !== null && term.scope === undefined) {
+    // A top-level term's namespace-derived IRI is written out. A scoped term
+    // without `@id` is emitted as written, so a processor reads it against
+    // `@vocab` exactly as the author's context did.
     definition['@id'] = term.iri
   }
 
@@ -88,7 +91,8 @@ export function buildTermDefinition(term: IrTerm): unknown {
   if (term['@language'] !== undefined) definition['@language'] = term['@language']
   if (term['@direction'] !== undefined) definition['@direction'] = term['@direction']
   if (term['@protected'] !== undefined) definition['@protected'] = term['@protected']
-  if (term['@context'] !== undefined) definition['@context'] = term['@context']
+  const scoped = termContextValue(term, ir)
+  if (scoped !== undefined) definition['@context'] = scoped
   if (term['@nest'] !== undefined) definition['@nest'] = term['@nest']
   if (term['@prefix'] !== undefined) definition['@prefix'] = term['@prefix']
   if (term['@index'] !== undefined) definition['@index'] = term['@index']
@@ -101,5 +105,24 @@ export function buildTermDefinition(term: IrTerm): unknown {
   if (keys.length === 1 && keys[0] === '@id' && typeof definition['@id'] === 'string') {
     return definition['@id']
   }
+  // A scoped term decoupled with `@id: null` is written the way a context
+  // writes it.
+  if (term.scope !== undefined && keys.length === 1 && definition['@id'] === null) return null
   return definition
+}
+
+/**
+ * The `@context` value a term carries in an emitted context: a reference as
+ * written, or a map rebuilt from the term's scoped-context settings followed by
+ * its scoped terms. Element ids and notes never reach it.
+ */
+export function termContextValue(term: IrTerm, ir?: Ir): unknown {
+  if (term.scopedContext === undefined) return term['@context']
+  const map: Record<string, unknown> = { ...term.scopedContext.settings }
+  if (ir) {
+    for (const child of scopedTermsOf(ir, term.id)) {
+      map[child.key] = buildTermDefinition(child, ir)
+    }
+  }
+  return map
 }

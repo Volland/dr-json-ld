@@ -152,4 +152,4 @@ describe('W3C JSON-LD 1.1 expand suite', () => {
 })
 
 /** Raised only alongside a fix. See `docs/conformance/expand.md` for the list. */
-export const EXPAND_RATCHET = 336
+export const EXPAND_RATCHET = 341

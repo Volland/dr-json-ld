@@ -29,6 +29,24 @@ export function serializeIr(ir: Ir): string {
       .sort((a, b) => a.iri.localeCompare(b.iri))
       .map((u) => stripPointer(u)),
     terms: byElementId(ir.terms).map((t) => stripPointer(t)),
+    // Absent rather than empty when the model declares none, so a model written
+    // before the shapes layer existed keeps a byte-identical snapshot.
+    ...(ir.shapes.length > 0
+      ? {
+          shapes: byElementId(ir.shapes).map((shape) => ({
+            ...stripPointer(shape),
+            // A field has no id of its own; it is ordered by the term it
+            // resolves to, and by key when it resolves to no model term.
+            fields: [...shape.fields]
+              .sort(
+                (a, b) =>
+                  (a.termId ?? '\uffff').localeCompare(b.termId ?? '\uffff') ||
+                  a.key.localeCompare(b.key),
+              )
+              .map((f) => stripPointer(f)),
+          })),
+        }
+      : {}),
     examples: byElementId(ir.examples).map((e) => stripPointer(e)),
     views: byElementId(ir.views).map((v) => stripPointer(v)),
   }

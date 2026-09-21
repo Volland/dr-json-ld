@@ -176,6 +176,14 @@ The host handles one intent at a time. A single gesture can post two — creatin
 
 The projection carries whatever the metamodel carries. A facet the canvas cannot show silently invites someone to author a model that contradicts what they see, which in JSON-LD is unusually easy: a `@container` the canvas omitted changes what the document must look like without changing any IRI.
 
+A gesture that needs several dependent edits is one intent that makes them all, applied in turn and returned as the one splice spanning what changed — so it is one undo step. Adding a field whose key has no term declares the term too; a promotion may create a class term, point the shape at it and add the scoped term. Renaming a term renames, in the same edit, every field that resolves to it and every view entry naming it, so a shape never loses a field to a rename. Scoped terms are edited by element id wherever they sit; one written as a flow mapping or a bare IRI, as contexts usually write them, is rewritten as a one-line flow mapping.
+
+### Shape builder
+
+Selecting a shape opens it in the inspector as a table of fields: key, range, `min`, `max`, and the coercion of the term the key resolves to. Each row says its cardinality and range are carried by `shacl`, absent from `@context`.
+
+The coercion is shown beside the range because the two must agree and belong to different layers — [[metamodel#Shapes#Shapes own cardinality, terms own coercion]]. Adding a field offers existing keys first; a key with no term asks for its IRI in the document and adds both. When a range and a coercion disagree the row carries the finding and offers a promotion — give the class its own term for the key, in its type-scoped context — which is asked, never applied, because the alternative of changing the shared term's coercion would silently change every other class that uses it.
+
 ### Asking
 
 Every question the canvas asks — a term name, an IRI, a confirmation — is rendered in the document. The webview never calls `window.prompt`, `window.confirm` or `window.alert`.
@@ -198,11 +206,13 @@ This is the tool's central claim. Every other JSON-LD tool shows one of these an
 
 The tree pane draws JSON structure: nesting, containers, language maps, `@nest` groupings, and the regions where a scoped context changes the active context.
 
-A scoped context is drawn as a nested region rather than as an annotation, because its effect is positional — it applies below a point and, absent `@propagate: false`, keeps applying. An annotation would state the fact while hiding the scope, which is the part people get wrong.
+A scoped context is drawn as a nested region rather than as an annotation, because its effect is positional — it applies below a point and, absent `@propagate: false`, keeps applying. An annotation would state the fact while hiding the scope, which is the part people get wrong. Its scoped terms are drawn inside the region, and each is its own element: selecting a scoped `name` selects that term, not the top-level `name`.
+
+With a shape selected, the pane draws the JSON skeleton a conforming document takes: its keys with their cardinality, the form each value takes, nested shapes as nested objects, and the class's type-scoped region around the keys read in it. A shape reached again below itself is drawn once, as a reference, so a recursive shape stays finite.
 
 ### Graph pane
 
-The graph pane draws classes, IRIs and the edges between them: what the document means once the JSON is gone.
+The graph pane draws classes, IRIs and the edges between them: what the document means once the JSON is gone. A shape is drawn as its class carrying its fields, with an edge per class or shape range labelled `key min..max`.
 
 It is the pane that most resembles `lpg-modeler`'s canvas, and it reuses React Flow with ELK for automatic layout. React Flow is DOM-based and degrades past a few hundred nodes, which is acceptable precisely because [[architecture#Views]] caps how much any one diagram shows.
 
@@ -258,7 +268,7 @@ Overwrite protection is by comparison rather than by timestamp: a file identical
 
 The home directory is reached through [[packages/cli/src/io.ts#Io|the CLI's `Io` seam]] rather than from `node:os` at the call site, for the same reason `cwd` is: a verb that writes outside the working directory has to be drivable by a test that does not write into the home directory of whoever is running it.
 
-Nothing here reaches the network — the skills ship inside the package — and continuous integration proves it by running the install in the job where outbound traffic is already dropped.
+Nothing here reaches the network — the skills ship inside the package — and continuous integration proves it by running the install in a network namespace holding only loopback, as every offline step there runs.
 
 ## Distribution
 
@@ -324,11 +334,19 @@ What it measured rather than assumed: the processor's conformance against the W3
 
 The open question this milestone settles: **the two panes do not share a layout sidecar.** The tree pane persists no coordinates — its layout is derived entirely from structure — so the sidecar holds graph-pane positions only, keyed by [[metamodel#Stable Element IDs|element id]] and nested per view. Whether a future tree pane needs coordinates is a question for the change that first wants them.
 
+### Milestone 2
+
+The shapes layer, the SHACL target and L3 executed by a real engine, with scoped contexts made first-class on the way. The instance-graph overlay, the rest of the milestone, is not yet built.
+
+What it ships: scoped terms with ids and facets, in the model, the IR, import, emit and comparison; `shapes:` with fields, cardinality and ranges, resolved through the processor's own active context; the L1 findings a shape can raise about itself; conversion to RDF with a pointer on every triple; the `shacl` target; L3 through `rdf-validate-shacl`, on by default for a model with shapes; classification of shape and scope differences; and a shape builder on the canvas.
+
+What it measured: closing four type-scoped reversion cases took the expand suite from 336 to 341 and the differential from 256 to 261 agreeing cases. The `toRdf` class passes 415 of 444 attempted cases, every failure an expansion gap. The bundled extension grew from 215 KB to 668 KB with the SHACL engine and Turtle parser.
+
 ### Still deferred
 
-Everything outside milestone 1: the shapes layer and every target that consumes it, RDF import, the lockfile, the rule catalog, the optional LLM layer, the hosted playground, and the extracted shared package.
+Everything outside milestones 1 and 2: RDF import, the rule catalog, the optional LLM layer, the hosted playground, and the extracted shared package.
 
-In full: the shapes layer, SHACL, framing and JSON Schema, the vocabulary document, types and the docs site, RDF import, the lockfile and its change classifier, the rule catalog and its explanation corpus, the optional LLM layer, the hosted playground, and the package extracted for sharing with `lpg-modeler`.
+In full: the instance-graph overlay, framing and JSON Schema, the vocabulary document, types and the docs site, RDF import, the rule catalog and its explanation corpus, the optional LLM layer, the hosted playground, the `shacl` artifact inside a published version, and the package extracted for sharing with `lpg-modeler`. The lockfile and its change classifier, once on this list, ship.
 
 Deferred is not cancelled. Each is reachable from this design: the IR serializer orders keys stably so a lockfile can be added without disturbing it, the terms layer leaves the names [[metamodel#Shapes]] will need unoccupied, and [[emitters#Capability Matrix]] is declared from the first target rather than retrofitted when a second appears.
 

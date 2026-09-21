@@ -47,6 +47,8 @@ export function parseLockfile(text: string): Ir {
   }
   return {
     ...(raw as unknown as Ir),
+    // A lockfile records shapes only when the model declared some.
+    shapes: Array.isArray(raw['shapes']) ? (raw['shapes'] as Ir['shapes']) : [],
     // Neither survives serialization, and neither should: a version must not
     // record where the model happened to sit.
     source: raw['source'] === undefined ? '' : String(raw['source']),

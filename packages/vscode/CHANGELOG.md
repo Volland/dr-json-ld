@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-09-21
+
+### Added — shapes, and scoped contexts you can edit
+
+- A scoped context's terms are real terms on the canvas: select, edit, rename and
+  add them, including inside a credential's protected type-scoped context.
+- Add a shape and edit it as a field table: range, minimum, maximum, and the
+  coercion of the term behind each key. The tree pane draws the JSON a conforming
+  document takes; the graph pane draws the shape and its nested shapes.
+- When two classes need one key read differently, the canvas offers to give one
+  its own term in its type-scoped context — it asks, and never changes the shared
+  term quietly.
+- For a model with shapes, every example document is checked against them (L3),
+  and a violation appears in the Problems panel at the key or value that broke it.
+
 ## [0.3.1] — 2026-09-21
 
 ### Fixed — every command reported "not found"

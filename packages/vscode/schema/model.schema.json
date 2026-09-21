@@ -65,6 +65,11 @@
       "type": "array",
       "items": { "$ref": "#/$defs/example" }
     },
+    "shapes": {
+      "description": "The shapes layer: class-level structure a @context cannot express — which fields a class has, how many values each takes, what they must be, and whether the class is closed. Emitted by the `shacl` target and checked at L3.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/shape" }
+    },
     "views": {
       "description": "Named subsets of the model, each forming one pair of diagrams.",
       "type": "array",
@@ -195,13 +200,23 @@
     },
 
     "inlineContext": {
-      "description": "A scoped context: null, an IRI, an inline object, or an array of those.",
+      "description": "A scoped context: null, an IRI, a map of scoped terms, or an array of those. Only the map form holds terms of this model; the others are references.",
       "oneOf": [
         { "type": "null" },
         { "type": "string" },
-        { "type": "object" },
+        { "$ref": "#/$defs/scopedContextMap" },
         { "type": "array", "items": { "oneOf": [{ "type": "null" }, { "type": "string" }, { "type": "object" }] } }
       ]
+    },
+
+    "scopedContextMap": {
+      "description": "A scoped context written as a map. Each entry that is not a keyword is a scoped term with its own element id and facets, written as a term definition, a bare IRI, or null. Keyword entries (`@vocab`, `@protected`, `@propagate`, ...) are settings of the context. Entries are described rather than refused here, so a scoped context the format accepted before stays accepted; `ldm check` reports what is wrong with one.",
+      "type": "object",
+      "patternProperties": {
+        "^[^@]": {
+          "anyOf": [{ "$ref": "#/$defs/term" }, { "type": ["string", "null"] }, {}]
+        }
+      }
     },
 
     "term": {
@@ -339,8 +354,84 @@
         "id": { "$ref": "#/$defs/elementId" },
         "name": { "type": "string", "minLength": 1 },
         "note": { "type": "string" },
-        "terms": { "type": "array", "items": { "type": "string" } }
+        "terms": { "type": "array", "items": { "type": "string" } },
+        "shapes": {
+          "description": "Shape names this view shows.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
       }
+    },
+
+    "shape": {
+      "description": "One shape. Shapes own cardinality; terms own coercion, so a field narrows what a key's values must be but never how they are read.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+        "targetClass": {
+          "description": "The class this shape applies to: a class term of this model, or a class IRI. Leave it out for a shape that applies only where a field's range names it, such as an untyped nested node.",
+          "type": "string",
+          "minLength": 1
+        },
+        "closed": {
+          "description": "Whether a node of the target class may carry properties no field names. `rdf:type` is always allowed.",
+          "type": "boolean"
+        },
+        "note": { "type": "string" },
+        "fields": {
+          "description": "Fields keyed by the JSON key a document uses under the target class. The key resolves as a processor would resolve it there, type-scoped context first.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/field" }
+        }
+      }
+    },
+
+    "field": {
+      "description": "How many values a key takes under the target class, and what they must be. An empty field constrains nothing yet.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min": {
+              "description": "The fewest values allowed. Leave it out for none required.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "description": "The most values allowed. Leave it out for no maximum.",
+              "type": "integer",
+              "minimum": 1
+            },
+            "range": { "$ref": "#/$defs/range" },
+            "note": { "type": "string" }
+          }
+        }
+      ]
+    },
+
+    "range": {
+      "description": "What a field's values must be: `iri`, `node` (an IRI or blank node), `literal`, `langString`, a datatype IRI such as `xsd:dateTime`, `{ class: … }` or `{ shape: … }`.",
+      "oneOf": [
+        { "enum": ["iri", "node", "literal", "langString"] },
+        { "description": "A datatype, as a compact or absolute IRI.", "type": "string", "pattern": ":" },
+        {
+          "description": "A node typed with this class: a class term of this model, or a class IRI.",
+          "type": "object",
+          "required": ["class"],
+          "additionalProperties": false,
+          "properties": { "class": { "type": "string", "minLength": 1 } }
+        },
+        {
+          "description": "A node conforming to another shape of this model.",
+          "type": "object",
+          "required": ["shape"],
+          "additionalProperties": false,
+          "properties": { "shape": { "type": "string", "minLength": 1 } }
+        }
+      ]
     }
   }
 }

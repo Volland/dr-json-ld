@@ -71,8 +71,8 @@ export function atOrBelowLevel(findings: readonly Finding[], level: Level): Find
 
 export const LEVEL_ORDER: Record<Level, number> = { L0: 0, L1: 1, L2: 2, L3: 3, L4: 4 }
 
-/** The levels this milestone implements. L3 and L4 are reported as unavailable. */
-export const IMPLEMENTED_LEVELS: readonly Level[] = ['L0', 'L1', 'L2']
+/** The levels this release implements. L4 is reported as unavailable. */
+export const IMPLEMENTED_LEVELS: readonly Level[] = ['L0', 'L1', 'L2', 'L3']
 
 export function isImplementedLevel(level: string): level is Level {
   return (IMPLEMENTED_LEVELS as readonly string[]).includes(level)

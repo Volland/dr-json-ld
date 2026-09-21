@@ -1,0 +1,85 @@
+# A credential vocabulary in the shape of Verifiable Credentials 2.0: classes
+# with protected type-scoped contexts, and shapes that give them structure.
+#
+# This file is *about* JSON-LD; it is not itself JSON-LD.
+
+jsonld: "1"
+
+namespace:
+  prefix: cred
+  base: https://example.org/credentials#
+
+mode: "1.1"
+
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+  schema: https://schema.org/
+
+terms:
+  id:
+    id: tid001
+    "@id": "@id"
+  type:
+    id: tty001
+    "@id": "@type"
+
+  # The class carries its own protected context: below a node of this type,
+  # these keys mean what the credential data model says they mean.
+  VerifiableCredential:
+    id: vcr001
+    "@id": cred:VerifiableCredential
+    "@context":
+      "@protected": true
+      issuer: { id: iss001, "@id": cred:issuer, "@type": "@id" }
+      validFrom: { id: vfr001, "@id": cred:validFrom, "@type": xsd:dateTime }
+      credentialSubject: { id: csu001, "@id": cred:credentialSubject, "@type": "@id" }
+
+  UniversityDegree:
+    id: udg001
+    "@id": cred:UniversityDegree
+
+  degree:
+    id: deg001
+    "@id": cred:degree
+    "@type": "@id"
+
+  name:
+    id: nam001
+    "@id": schema:name
+
+shapes:
+  Credential:
+    id: shc001
+    targetClass: VerifiableCredential
+    note: Every credential names who issued it, when it becomes valid, and whom it is about.
+    fields:
+      issuer: { min: 1, max: 1, range: iri }
+      validFrom: { min: 1, max: 1, range: xsd:dateTime }
+      credentialSubject: { min: 1, range: { shape: DegreeSubject } }
+
+  # No target class: a credential's subject is an untyped node, reached only
+  # through `credentialSubject`.
+  DegreeSubject:
+    id: shs001
+    fields:
+      name: { max: 1, range: xsd:string }
+      degree: { min: 1, max: 1, range: { shape: Degree } }
+
+  Degree:
+    id: shd001
+    targetClass: UniversityDegree
+    closed: true
+    fields:
+      name: { min: 1, max: 1 }
+
+examples:
+  - id: exc001
+    path: documents/credential-ok.json
+    note: A degree credential that satisfies every shape.
+    expect: { ok: true, maxSeverity: info }
+
+views:
+  - id: vwc001
+    name: Credential
+    terms: [id, type, VerifiableCredential, UniversityDegree, degree, name]
+    shapes: [Credential, DegreeSubject, Degree]

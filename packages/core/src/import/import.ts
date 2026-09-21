@@ -111,7 +111,7 @@ export function importContext(document: unknown, options: ImportOptions = {}): I
 
     const id = mintElementId(taken)
     taken.add(id)
-    terms.push({ key, id, definition: recoverTerm(value) })
+    terms.push({ key, id, definition: recoverTerm(value, taken) })
   }
 
   const notRecovered = describeGaps(terms.length, vocab, sawProtected)
@@ -120,7 +120,8 @@ export function importContext(document: unknown, options: ImportOptions = {}): I
     options,
   )
 
-  return { text, referenced, notRecovered, termCount: terms.length }
+  // Every id minted is one term, top-level or scoped.
+  return { text, referenced, notRecovered, termCount: taken.size }
 }
 
 /**
@@ -133,8 +134,12 @@ function isPrefixDeclaration(key: string, value: string): boolean {
   return /[#/:?]$/.test(value)
 }
 
-/** Recover every facet a term definition states. */
-function recoverTerm(value: unknown): Record<string, unknown> {
+/**
+ * Recover every facet a term definition states. A map-valued scoped context is
+ * recovered as scoped terms, each with a minted id, to any depth; its keyword
+ * entries stay as they were, as settings of that context.
+ */
+function recoverTerm(value: unknown, taken: Set<string>, scoped = false): Record<string, unknown> {
   if (typeof value === 'string') return { '@id': value }
   if (value === null) return { '@id': null }
   if (typeof value !== 'object' || Array.isArray(value)) return { '@id': null }
@@ -161,7 +166,7 @@ function recoverTerm(value: unknown): Record<string, unknown> {
         out[facet] = facetValue
         break
       case '@context':
-        out[facet] = facetValue
+        out[facet] = recoverScopedContext(facetValue, taken)
         break
       case '@container': {
         const list = (Array.isArray(facetValue) ? facetValue : [facetValue]).filter(
@@ -185,7 +190,24 @@ function recoverTerm(value: unknown): Record<string, unknown> {
   }
 
   if (Object.keys(raw).length > 0) out['raw'] = raw
-  if (!('@id' in out) && !('@reverse' in out) && !('raw' in out)) out['@id'] = null
+  // A scoped term without `@id` is read against `@vocab` by a processor, and is
+  // kept that way; only a top-level one needs its absence made explicit.
+  if (!scoped && !('@id' in out) && !('@reverse' in out) && !('raw' in out)) out['@id'] = null
+  return out
+}
+
+function recoverScopedContext(value: unknown, taken: Set<string>): unknown {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return value
+  const out: Record<string, unknown> = {}
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (key.startsWith('@')) {
+      out[key] = child
+      continue
+    }
+    const id = mintElementId(taken)
+    taken.add(id)
+    out[key] = { id, ...recoverTerm(child, taken, true) }
+  }
   return out
 }
 
@@ -199,7 +221,7 @@ function describeGaps(
       kind: 'class-membership',
       message: `A @context carries no information about which terms belong together as a class, so none was recovered for the ${termCount} term${
         termCount === 1 ? '' : 's'
-      } imported. Class structure is the shapes layer, which this release does not implement.`,
+      } imported, and no shape was invented. Type-scoped contexts were kept as scoped terms; declare shapes to say which fields a class has.`,
     },
     {
       kind: 'documentation',

@@ -1,0 +1,16 @@
+# reject: field
+jsonld: "1"
+
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+
+terms:
+  Person: { "@id": ex:Person }
+  name: { "@id": ex:name }
+
+shapes:
+  Person:
+    targetClass: Person
+    fields:
+      name: { min: -1 }

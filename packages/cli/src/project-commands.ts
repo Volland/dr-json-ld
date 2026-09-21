@@ -286,7 +286,13 @@ export function diff(context: CommandContext): number {
   if (flags.has('json')) {
     io.out(
       JSON.stringify(
-        { before, after, worst: result.worst ?? null, differences: result.differences },
+        {
+          before,
+          after,
+          worst: result.worst ?? null,
+          differences: result.differences,
+          notes: result.notes,
+        },
         null,
         2,
       ),
@@ -301,6 +307,7 @@ export function diff(context: CommandContext): number {
         `${result.differences.length} difference(s); the most severe is ${result.worst}.`,
       )
     }
+    for (const note of result.notes) io.out(`note: ${note}`)
   }
 
   if (gate === undefined) return EXIT_OK

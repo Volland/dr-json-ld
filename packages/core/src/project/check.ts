@@ -11,7 +11,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { relative, resolve } from 'node:path'
 
 import { FindingCollector } from '../findings/collector.js'
-import { hasErrors, sortFindings, type Finding, type Level } from '../findings/finding.js'
+import { hasErrors, LEVEL_ORDER, sortFindings, type Finding, type Level } from '../findings/finding.js'
 import { resolveModelText } from '../model/resolve.js'
 import { SourceIndex } from '../source/index-file.js'
 import { resolverFor } from '../vendor/vendor.js'
@@ -28,6 +28,13 @@ export interface ProjectModelReport {
   model: ProjectModel
   findings: Finding[]
   examples: ExampleOutcome[]
+  /** The level this model was checked through. */
+  level: Level
+  /**
+   * The model's own verdict. A negative example that raised what it declared
+   * does not fail it, though its findings are still reported.
+   */
+  failed: boolean
 }
 
 export interface ProjectReport {
@@ -58,26 +65,31 @@ export function checkProject(
   project: Project,
   options: CheckProjectOptions = {},
 ): ProjectReport {
-  const level = options.level ?? 'L2'
   const all = new FindingCollector()
   all.addAll(options.projectFindings ?? [])
 
   const source = SourceIndex.parse(readFileSync(project.file, 'utf8'), { path: project.file })
   all.addAll(crossProjectFindings(project, source, options.searchRoot ?? project.root))
+  const projectFailed = hasErrors(all.all())
 
   const models: ProjectModelReport[] = []
   for (const model of project.models) {
     if (!existsSync(model.path)) continue
-    const report = checkOneModel(project, model)
+    const report = checkOneModel(project, model, options.level)
     models.push(report)
     all.addAll(report.findings)
   }
 
+  // Unset, each model is checked as far as it allows — through L3 when it
+  // declares shapes — and the project reports the furthest any model went.
+  const level =
+    options.level ??
+    models.reduce<Level>((acc, m) => (LEVEL_ORDER[m.level] > LEVEL_ORDER[acc] ? m.level : acc), 'L2')
   const findings = sortFindings(all.all())
-  return { project, level, findings, models, failed: hasErrors(findings) }
+  return { project, level, findings, models, failed: projectFailed || models.some((m) => m.failed) }
 }
 
-function checkOneModel(project: Project, model: ProjectModel): ProjectModelReport {
+function checkOneModel(project: Project, model: ProjectModel, level?: Level): ProjectModelReport {
   const text = readFileSync(model.path, 'utf8')
   // The path is relative to the project, so a finding reads the same wherever
   // the command was run from.
@@ -111,7 +123,7 @@ function checkOneModel(project: Project, model: ProjectModel): ProjectModelRepor
     : undefined
 
   const report = validateModel(source, {
-    level: 'L2',
+    ...(level !== undefined ? { level } : {}),
     ...(resolveContext ? { resolveContext } : {}),
     readExample: (relativePath) => {
       const full = resolve(model.path, '..', relativePath)
@@ -123,6 +135,8 @@ function checkOneModel(project: Project, model: ProjectModel): ProjectModelRepor
     model,
     findings: sortFindings([...report.findings, ...extra.all()]),
     examples: report.examples,
+    level: report.level,
+    failed: report.failed || hasErrors(extra.all()),
   }
 }
 

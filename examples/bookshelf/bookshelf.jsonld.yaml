@@ -1,0 +1,105 @@
+# yaml-language-server: $schema=https://volland.github.io/dr-json-ld/schemas/model/1/model.schema.json
+#
+# A small bookshelf vocabulary for trying the canvas. It uses one of each thing
+# the two panes disagree about: a container that reshapes the JSON but not the
+# graph, a list that changes both, a coerced reference, a reverse property and a
+# scoped context.
+#
+# This file is *about* JSON-LD; it is not itself JSON-LD.
+
+jsonld: "1"
+project: bookshelf
+
+namespace:
+  prefix: shelf
+  base: https://example.org/bookshelf#
+
+mode: "1.1"
+
+prefixes:
+  schema: https://schema.org/
+  xsd: http://www.w3.org/2001/XMLSchema#
+
+terms:
+  Book:
+    id: bk0001
+    "@id": schema:Book
+    note: The class of every book on the shelf.
+
+  Person:
+    id: pr0001
+    "@id": schema:Person
+
+  title:
+    id: tt0001
+    "@id": schema:name
+    "@container": "@language"
+    note: A language map. The JSON is keyed by language tag; the graph has one triple per language.
+
+  # `@type: @id` is what makes the string a link to a person rather than a label.
+  author:
+    id: au0001
+    "@id": schema:author
+    "@type": "@id"
+
+  # `@set` changes the JSON shape (always an array) and changes no triple.
+  tags:
+    id: tg0001
+    "@id": schema:keywords
+    "@container": "@set"
+
+  # `@list` is the one container that does change the triples: order is kept.
+  chapters:
+    id: ch0001
+    "@id": shelf:chapter
+    "@container": "@list"
+
+  published:
+    id: pb0001
+    "@id": schema:datePublished
+    "@type": xsd:date
+
+  # A reverse property: on a Person, `wrote` lists books whose author is them.
+  wrote:
+    id: wr0001
+    "@reverse": schema:author
+    "@type": "@id"
+    "@container": "@set"
+
+  # A scoped context: below `publisher`, `name` means the organisation's legal name.
+  publisher:
+    id: ps0001
+    "@id": schema:publisher
+    "@context":
+      name: https://schema.org/legalName
+
+  name:
+    id: nm0001
+    "@id": schema:name
+
+examples:
+  - id: ex0001
+    path: documents/book-ok.json
+    note: Uses every term and loses nothing.
+    expect: { ok: true, maxSeverity: info }
+
+  - id: ex0003
+    path: documents/person-ok.json
+    note: The reverse side, a person and the books they wrote.
+    expect: { ok: true, maxSeverity: info }
+
+  # This one loses content silently: `writtenBy` is not a term, and
+  # expansion still succeeds.
+  - id: ex0002
+    path: documents/book-lossy.json
+    note: A misspelt key disappears on expansion.
+    expect:
+      rules: [L2.key-dropped]
+
+views:
+  - id: vw0001
+    name: Book
+    terms: [Book, title, author, tags, chapters, published, publisher]
+  - id: vw0002
+    name: People
+    terms: [Person, name, wrote]

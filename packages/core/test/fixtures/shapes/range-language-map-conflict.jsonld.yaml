@@ -1,0 +1,18 @@
+# raises: L1.shape-range-coercion-conflict
+# A plain string range on a language map: the values will be langString.
+jsonld: "1"
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+mode: "1.1"
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+terms:
+  Book: { id: boo001, "@id": ex:Book }
+  title: { id: tit001, "@id": ex:title, "@container": "@language" }
+shapes:
+  Book:
+    id: shp001
+    targetClass: Book
+    fields:
+      title: { range: xsd:string }

@@ -21,6 +21,10 @@ interface Candidate {
   kind: 'term' | 'example' | 'view'
   key: string
   pointer: JsonPointer
+  /** A scoped term written as a bare IRI or null, which has nowhere to put an id. */
+  shorthand?: boolean
+  /** Inside a scoped context, where a flow mapping may be nested on one line. */
+  scoped?: boolean
 }
 
 /**
@@ -45,6 +49,7 @@ export function backfillElementIds(text: string, path: string): BackfillResult {
       const existing = definitionId(def)
       if (existing) taken.add(existing)
       else candidates.push({ kind: 'term', key, pointer })
+      collectScoped(def, pointer, key, taken, candidates)
     }
   }
 
@@ -79,7 +84,11 @@ export function backfillElementIds(text: string, path: string): BackfillResult {
   for (const candidate of candidates) {
     const id = mintElementId(taken)
     taken.add(id)
-    const splice = spliceForId(text, source, candidate.pointer, id)
+    const splice = candidate.shorthand
+      ? spliceForShorthand(text, source, candidate.pointer, id)
+      : candidate.scoped
+        ? spliceForScopedId(text, source, candidate.pointer, id)
+        : spliceForId(text, source, candidate.pointer, id)
     if (!splice) continue
     splices.push(splice)
     added.push({ kind: candidate.kind, key: candidate.key, id })
@@ -87,6 +96,84 @@ export function backfillElementIds(text: string, path: string): BackfillResult {
 
   if (splices.length === 0) return { text, added: [], changed: false }
   return { text: applySplices(text, splices), added, changed: true }
+}
+
+/**
+ * Scoped terms, to any depth. A scoped context written as an IRI or an array is
+ * a reference and holds no terms of this model.
+ */
+function collectScoped(
+  def: unknown,
+  pointer: JsonPointer,
+  path: string,
+  taken: Set<string>,
+  candidates: Candidate[],
+): void {
+  if (def === null || typeof def !== 'object' || Array.isArray(def)) return
+  const context = (def as Record<string, unknown>)['@context']
+  if (context === null || typeof context !== 'object' || Array.isArray(context)) return
+  const contextPointer = pointerChild(pointer, '@context')
+  for (const [key, child] of Object.entries(context as Record<string, unknown>)) {
+    if (key.startsWith('@')) continue
+    const childPointer = pointerChild(contextPointer, key)
+    const childPath = `${path} › ${key}`
+    if (child === null || typeof child === 'string') {
+      candidates.push({ kind: 'term', key: childPath, pointer: childPointer, shorthand: true })
+      continue
+    }
+    const existing = definitionId(child)
+    if (existing) taken.add(existing)
+    else candidates.push({ kind: 'term', key: childPath, pointer: childPointer, scoped: true })
+    collectScoped(child, childPointer, childPath, taken, candidates)
+  }
+}
+
+/**
+ * A bare IRI (or null) becomes a flow mapping carrying the id and the same
+ * value as `@id`. The scalar's own text is kept, quoting and all, so the emitted
+ * context is unchanged.
+ */
+function spliceForShorthand(
+  text: string,
+  source: SourceIndex,
+  pointer: JsonPointer,
+  id: string,
+): Splice | undefined {
+  const key = source.keyRangeOf(pointer)
+  const value = source.rangeOf(pointer)
+  if (!key || !value) return undefined
+  const hasValue = value.start !== key.start && value.end > value.start
+  if (hasValue) {
+    const scalar = text.slice(value.start, value.end)
+    return { start: value.start, end: value.end, text: `{ id: ${id}, "@id": ${scalar} }` }
+  }
+  // `name:` with nothing after it is null; the mapping goes after the colon.
+  const colon = text.indexOf(':', key.end)
+  if (colon === -1) return undefined
+  return { start: colon + 1, end: colon + 1, text: ` { id: ${id}, "@id": null }` }
+}
+
+/**
+ * A scoped term written as a mapping. Inside a flow mapping the id goes just
+ * after the term's own opening brace, which may not be the first brace on the
+ * line; a block mapping is handled as a top-level term is.
+ */
+function spliceForScopedId(
+  text: string,
+  source: SourceIndex,
+  pointer: JsonPointer,
+  id: string,
+): Splice | undefined {
+  const value = source.rangeOf(pointer)
+  if (value && text[value.start] === '{') {
+    const after = value.start + 1
+    // `{ "@id": … }` already has its space after the brace; `{"@id": …}` does
+    // not, and an empty `{}` wants none before the brace closes.
+    const next = text.slice(after)
+    const spacing = /^\s/.test(next) || /^\}/.test(next) ? '' : ' '
+    return { start: after, end: after, text: ` id: ${id},${spacing}` }
+  }
+  return spliceForId(text, source, pointer, id)
 }
 
 function definitionId(def: unknown): string | undefined {

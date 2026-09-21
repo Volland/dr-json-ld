@@ -93,7 +93,10 @@ process.exit(report.failed ? 1 : 0)
 ```
 
 The ladder runs **L0** well-formedness, **L1** context errors located at the term
-in your model rather than in a generated artifact, and **L2** lossiness. Each
+in your model rather than in a generated artifact, **L2** lossiness, and — for a
+model with `shapes:` — **L3** conformance, decided by a SHACL engine running the
+emitted shapes graph over each example and located at the key or value that broke
+it. Each
 `Finding` carries a stable `ruleId`, a `pointer`, a `file` and a `loc` — the
 wording is not an interface, the rule id is.
 
@@ -121,18 +124,21 @@ const { text, findings, downgrades } = emit(ir!, { target: 'context', source })
 ```
 
 `context` references the contexts a model uses; `context-inline` flattens them
-and *reports the fork* rather than performing it quietly. Generated artifacts
+and *reports the fork* rather than performing it quietly. `shacl` writes the
+shapes layer as a SHACL shapes graph in Turtle, with a comment wherever SHACL
+cannot say what the model means. Generated artifacts
 carry a header saying they are generated.
 
 ## What is in the box
 
 | Area | Some of what it exports |
 | --- | --- |
-| **Processor** | `expand`, `compact`, `expandTraced`, `processContext`, `expandIri`, `activeContextForModel` |
+| **Processor** | `expand`, `compact`, `expandTraced`, `processContext`, `expandIri`, `activeContextForModel`, `toRdf` — every triple with its source pointers |
 | **Provenance** | `SourceIndex`, `resolvePointer`, `pointersIn`, `strip`, `bareExpanded` |
 | **Model** | `resolveModel`, `resolveModelText`, `serializeIr`, `backfillElementIds`, `type Ir` |
 | **Validation** | `validateModel`, `validateModelText`, `RULES`, `type Finding`, `type Level` |
-| **Emitters** | `emit`, `buildContextDocument`, `capabilitiesFor` |
+| **Emitters** | `emit`, `emitShacl`, `buildContextDocument`, `capabilitiesFor` |
+| **Shapes** | `resolveShapeFields`, `prepareShapes`, `checkConformance`, `addShapeSplice`, `addFieldSplice`, `type IrShape` |
 | **Import** | `importContext` — an existing `@context` becomes a model |
 | **Vendoring** | `VendorStore`, `vendorCheck`, `vendorRefresh`, `integrityOf`, `resolverFor` |
 | **Projects** | `loadProject`, `checkProject`, `projectScaffold`, `modelScaffold` |

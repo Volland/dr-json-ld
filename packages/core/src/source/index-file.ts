@@ -43,6 +43,14 @@ export interface LocatedNode {
   key?: Range
 }
 
+/** A key that repeats one earlier in the same mapping. */
+export interface DuplicateKey {
+  /** The pointer both occurrences share. */
+  pointer: JsonPointer
+  /** The range of the second occurrence's key. */
+  key: Range
+}
+
 export interface SourceIndexOptions {
   /** Shown in findings and errors. */
   path: string
@@ -55,6 +63,12 @@ export class SourceIndex {
   readonly data: unknown
   /** Parse errors, already positioned. */
   readonly errors: Array<{ message: string; range: Range }>
+  /**
+   * Every key that repeats a key earlier in the same mapping, in document
+   * order. The parsed value keeps only one of them, so this is the only place
+   * the second occurrence is still visible.
+   */
+  readonly duplicateKeys: DuplicateKey[]
 
   private readonly lineStarts: number[]
   private readonly byPointer: Map<JsonPointer, LocatedNode>
@@ -66,11 +80,13 @@ export class SourceIndex {
     errors: Array<{ message: string; range: Range }>,
     lineStarts: number[],
     byPointer: Map<JsonPointer, LocatedNode>,
+    duplicateKeys: DuplicateKey[],
   ) {
     this.path = path
     this.text = text
     this.data = data
     this.errors = errors
+    this.duplicateKeys = duplicateKeys
     this.lineStarts = lineStarts
     this.byPointer = byPointer
   }
@@ -100,8 +116,9 @@ export class SourceIndex {
     }))
 
     const byPointer = new Map<JsonPointer, LocatedNode>()
+    const duplicateKeys: DuplicateKey[] = []
     if (doc.contents) {
-      indexNode(doc.contents as ParsedNode, pointerRoot(), byPointer, toRange)
+      indexNode(doc.contents as ParsedNode, pointerRoot(), byPointer, toRange, duplicateKeys)
     }
 
     let data: unknown
@@ -111,7 +128,7 @@ export class SourceIndex {
       data = undefined
     }
 
-    return new SourceIndex(options.path, text, data, errors, lineStarts, byPointer)
+    return new SourceIndex(options.path, text, data, errors, lineStarts, byPointer, duplicateKeys)
   }
 
   /** The range of the node a pointer names, or `undefined` if it names nothing. */
@@ -185,6 +202,7 @@ function indexNode(
   pointer: JsonPointer,
   out: Map<JsonPointer, LocatedNode>,
   toRange: ToRange,
+  duplicates: DuplicateKey[],
   keyRange?: Range,
 ): void {
   const value = toRange(node.range ?? undefined)
@@ -194,6 +212,7 @@ function indexNode(
   if (!out.has(pointer)) out.set(pointer, entry)
 
   if (isMap(node)) {
+    const seen = new Set<string>()
     for (const item of node.items) {
       if (!isPair(item)) continue
       const keyNode = item.key as Node
@@ -201,9 +220,11 @@ function indexNode(
       if (key === undefined) continue
       const childPointer = pointerChild(pointer, key)
       const kr = toRange((keyNode as ParsedNode).range ?? undefined)
+      if (seen.has(key)) duplicates.push({ pointer: childPointer, key: kr })
+      seen.add(key)
       const valueNode = item.value as Node | null
       if (valueNode && (isMap(valueNode) || isSeq(valueNode) || isScalar(valueNode))) {
-        indexNode(valueNode, childPointer, out, toRange, kr)
+        indexNode(valueNode, childPointer, out, toRange, duplicates, kr)
       } else if (!out.has(childPointer)) {
         // A key with no value still has a position, which is what a finding on
         // an empty term definition needs.
@@ -217,7 +238,7 @@ function indexNode(
     node.items.forEach((item, i) => {
       const child = item as Node
       if (isMap(child) || isSeq(child) || isScalar(child)) {
-        indexNode(child, pointerChild(pointer, i), out, toRange)
+        indexNode(child, pointerChild(pointer, i), out, toRange, duplicates)
       }
     })
   }

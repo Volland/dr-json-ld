@@ -3,7 +3,7 @@
   "displayName": "JSON-LD Modeler",
   "description": "Author a JSON-LD @context as a reviewable YAML model, see it as two coordinated diagrams, and find out what your documents are silently losing.",
   "publisher": "pavlyshyn",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
@@ -81,7 +81,7 @@
     ]
   },
   "devDependencies": {
-    "@json-ld-modeler/core": "0.3.1",
+    "@json-ld-modeler/core": "0.4.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/vscode": "^1.90.0",

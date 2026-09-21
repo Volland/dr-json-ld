@@ -4,6 +4,65 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-09-21
+
+### Added — shapes: class structure a `@context` cannot express
+
+`shapes:` in a model says which fields a class has, how many values each takes
+(`min`, `max`) and what they must be (`iri`, `node`, `literal`, `langString`, a
+datatype, `{ class }` or `{ shape }`). A shape may target a class or none, for an
+untyped nested node such as a credential's subject. Field keys resolve as a
+JSON-LD processor would resolve them under the class, type-scoped context first.
+A range that contradicts a term's coercion is an L1 finding at the field — shapes
+own cardinality, terms own coercion.
+
+### Added — the `shacl` target and validation L3
+
+`ldm emit --target shacl` writes the shapes layer as a SHACL shapes graph in
+Turtle, with a comment where SHACL cannot say what the model means (cardinality on
+a `@list`, a `@graph` container). `ldm check` runs L3 by default for a model with
+shapes: each example is converted to RDF and validated with `rdf-validate-shacl`
+against that same emitted graph, and each violation (`L3.min-count`,
+`L3.max-count`, `L3.datatype`, `L3.node-kind`, `L3.class`, `L3.node`,
+`L3.closed`) is reported at the key or value in the document. A violation inside
+a nested shape is reported where it occurs.
+
+### Added — scoped contexts are first-class
+
+Each term definition inside a term's `@context` map is now a term: element id,
+facets, inspector, diff. `ldm ids` backfills them; `ldm import` brings a
+credential context's type-scoped contexts in as scoped terms.
+
+### Added — conversion to RDF, with pointers
+
+JSON-LD to RDF is implemented in the processor so every triple carries the JSON
+Pointer of what produced it. The W3C `toRdf` class passes 415 of 444 attempted
+cases; every failure is an expansion gap shared with the expand class.
+
+### Added — the shape builder on the canvas
+
+Shapes as a field table in the inspector, the JSON skeleton of a conforming
+document in the tree pane, shapes and their range edges in the graph pane, and a
+promotion offered when two classes need one key read differently.
+
+### Changed
+
+- `ldm diff` classifies shape and scope differences.
+- A negative example that raises what it declares no longer fails the check, so
+  L3 negative examples can pass; a declared rule above the level run is not
+  tested by that run.
+- `ldm check --project` checks each model as far as it allows, through L3 when it
+  has shapes.
+
+### Fixed
+
+- IRI resolution follows RFC 3986 section 5.2. The URL parser used before turned
+  `//g` against `http://a/b` into `http://g/` and percent-encoded characters an
+  IRI may carry.
+- Four type-scoped context cases (`tc012`, `tc019`, `tc024`, `tc028`): a term
+  defined in a type-scoped context lost its own scoped context one node down.
+  Expand now passes 341 of 376 attempted W3C cases (336 before).
+
 ## [0.3.1] — 2026-09-21
 
 ### Fixed — the 0.3.0 extension registered no commands

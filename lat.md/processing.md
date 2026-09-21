@@ -26,11 +26,13 @@ A finding without a source pointer is not considered finished work.
 
 The envelope is a side table rather than a wrapper object: the pointer is stored on each produced object under a symbol, so the expanded value is ordinary JSON and stripping provenance is a structural clone rather than a filter. That is what makes "provenance does not leak into output" a property the type system cannot accidentally violate.
 
+RDF conversion extends the source map to triples: each triple records the pointer of the node object behind its subject, and of the key and value behind its predicate and object. That is what lets an L3 violation — which arrives as a focus node, a path and a value — land on the key or value the author typed. See [[processing#RDF Conversion#From JSON-LD to RDF]].
+
 One observation is retracted rather than reported. A node inside an `@id` map is expanded before the map key reaches it, so it looks like a blank node on the way through; the container then supplies its identifier. Reporting the loss anyway would be a false positive at exactly the place a container is doing its job.
 
 ## Trace
 
-An expansion may be run in traced mode, producing an ordered record of the algorithm's steps: each term lookup, each IRI resolution, each change to the active context, each value coerced, each key dropped.
+An expansion may be run in traced mode, producing an ordered record of the algorithm's steps: each term lookup, each IRI resolution, each change to the active context, each value coerced, each key dropped, and each triple emitted.
 
 The trace is the deep explanation feature, and it is a by-product of the instrumentation the source map already requires rather than a separate build. Prose about how JSON-LD works is abundant and mostly unread; the same explanation running on the document the user is currently confused about is not. It is also the only honest way to explain a [[metamodel#Terms#Scoped Contexts|scoped context]], whose whole behaviour is a sequence of active-context changes.
 
@@ -46,9 +48,11 @@ Cases the processor does not pass are listed rather than hidden, with the reason
 
 Each suite carries a ratchet constant in its test file. It exists so an unexplained regression fails the build; raising it is a deliberate act that accompanies a fix, never a way to make a red build green.
 
+The `toRdf` class is run too, over this processor's own expansion and RDF conversion, with datasets compared after URDNA2015 canonicalization so blank node labels never decide a result. As measured when it was added: 415 of 444 attempted cases pass, and every failure is an expansion gap shared with the expand class rather than a conversion bug. The differential against `jsonld.js` agrees on 320 datasets; of the 14 divergences, 5 are cases where this processor matches the suite and `jsonld.js` does not — two of them because `jsonld.js` writes an IRI it should have dropped straight into its N-Quads output.
+
 ## Delegated Algorithms
 
-Framing, URDNA2015 canonicalization and N-Quads serialization are delegated to existing libraries rather than implemented here.
+Framing, URDNA2015 canonicalization and N-Quads parsing are delegated to existing libraries rather than implemented here. Conversion to RDF is not: it is on the provenance path.
 
 The line is drawn at provenance. Expansion and compaction are on the path between what the user wrote and what the tool reports, so they must carry pointers. Canonicalization is a pure function over an already-expanded graph with no user-facing intermediate steps, and framing — while user-facing — operates on expanded output whose pointers already exist. Implementing them would add risk and conformance surface for no provenance gain.
 
@@ -72,7 +76,21 @@ Every command other than the refresh runs with no network access at all.
 
 Reproducibility is the first reason: a build that fetches is a build that can fail or change for reasons no commit explains, and air-gapped continuous integration is a normal requirement. The second reason is narrower and sharper. A model file names the URLs to fetch, so a command that fetches what a model tells it to, running in continuous integration against a pull request from outside, is a request-forgery primitive. The refresh command is the one place that risk exists, and it is invoked by a person rather than by a pipeline.
 
+Continuous integration enforces this rather than asserting it: each offline step runs through `scripts/offline.sh`, in a fresh network namespace holding only loopback. The first mechanism, dropping all outbound traffic on the runner, also cut the runner off from GitHub, and every job ended as "lost communication with the server" — so the isolation is per step, not per machine.
+
 ## RDF Conversion
+
+JSON-LD converts to RDF inside the processor, carrying pointers, because L3 needs them. The reverse direction — RDF back into idiomatic JSON-LD — is a core conversion that is still deferred.
+
+### From JSON-LD to RDF
+
+The Deserialize JSON-LD to RDF algorithm runs over this processor's own expanded output, and every triple carries the pointers of the input that produced it.
+
+It is implemented here rather than delegated because the pointer is the feature. Re-deriving pointers from a delegated conversion would mean matching triples back to the input by value, which is ambiguous exactly when a value repeats. Blank nodes are labelled in document order, so a document always converts to the same labels.
+
+IRI resolution was rewritten for it as RFC 3986 section 5.2 over the strings themselves. The WHATWG `URL` parser it replaced percent-encodes characters, lower-cases hosts and appends a slash to an authority with no path — `//g` against `http://a/b` became `http://g/` — and each of those changes an IRI, which changes a triple. An IRI that is not well formed (whitespace, `<>`, a second `#`) is dropped rather than asserted, as the algorithm requires.
+
+### From RDF to JSON-LD
 
 RDF in any of the usual syntaxes converts to JSON-LD by the specification's own algorithm and is then compacted against the model's context, so the result is idiomatic rather than raw expanded form.
 

@@ -45,6 +45,16 @@ terms:
   name:
     id: aaa111                  # element id; generated, stable, do not retype
     "@id": schema:name
+  Person:
+    id: per001
+    "@id": schema:Person
+
+shapes:                         # class structure a @context cannot express
+  Person:
+    id: shp001
+    targetClass: Person
+    fields:
+      name: { min: 1, max: 1 }
 
 examples:
   - path: documents/ok.json
@@ -52,7 +62,8 @@ examples:
 
 views:
   - name: Overview
-    terms: [name]
+    terms: [name, Person]
+    shapes: [Person]
 ```
 
 `jsonld`, `namespace` and `terms` are required. Everything else is optional.
@@ -61,7 +72,7 @@ directive.
 
 ## Element ids are identity
 
-Every term, example and view carries a short generated `id`. That id is the
+Every term — scoped terms included — every shape, example and view carries a short generated `id`. That id is the
 thing the tool treats as identity; the key and the IRI are both mutable
 attributes of it. Renames are detected through ids and never inferred from
 similarity, which is why `ldm ids <model>` exists — it backfills ids for
@@ -80,6 +91,55 @@ documentation a `@context` cannot hold.
 
 A term must carry at least one of `@id`, `@reverse` or `raw`. Without one of
 those there is nothing to map the key to.
+
+## Scoped terms
+
+A term's `@context`, written as a map, holds terms of its own. Each entry is a
+term with an element id and facets, exactly like a top-level one; the keyword
+entries (`@protected`, `@propagate`, `@vocab`, …) are settings of that context.
+
+```yaml
+  VerifiableCredential:
+    id: vc0001
+    "@id": cred:VerifiableCredential
+    "@context":
+      "@protected": true
+      issuer: { id: is0001, "@id": cred:issuer, "@type": "@id" }
+```
+
+A key may appear once per map, so `name` at the top level and `name` inside
+`publisher`'s context are two terms. A bare IRI (`name: schema:legalName`) is
+accepted, and `ldm ids` rewrites it to a mapping so it can carry its id. A
+`@context` given as an IRI or an array is a reference to someone else's context
+and holds no terms of this model.
+
+## Shapes
+
+`shapes:` says which fields a class has, how many values each takes and what
+they must be. A shape names its `targetClass` — a class term or an IRI — or no
+class at all, for a nested node that is only reached through another shape's
+field. `closed: true` forbids properties no field names (`rdf:type` is always
+allowed).
+
+A field is keyed by the JSON key a document uses under the class, and states
+`min`, `max` and `range`:
+
+- `iri`, `node` (an IRI or blank node), `literal`, `langString`
+- a datatype such as `xsd:dateTime`
+- `{ class: Person }` or `{ shape: Address }`
+
+The key resolves as a processor would resolve it under the class: its
+type-scoped context first, then the model's terms. Shapes own cardinality;
+terms own coercion. A range that disagrees with how the term reads the key — a
+datatype on an `@type: @id` term, a node range on a term with no `@type: @id` —
+is reported at the field (`L1.shape-range-coercion-conflict`,
+`L1.shape-range-needs-id-coercion`). Fix it on the term, or give the class its
+own term in its type-scoped context.
+
+A model with shapes is checked through L3 by default: every example is converted
+to RDF and validated against the SHACL that `ldm emit --target shacl` writes, and
+a violation is reported at the JSON Pointer of the value or key in the document.
+A negative example names the `L3.*` rules it must raise.
 
 ## What the schema refuses
 

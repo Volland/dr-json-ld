@@ -60,14 +60,20 @@ describe('the ladder', () => {
     expect(atL2.findings.some((f) => f.level === 'L2')).toBe(true)
   })
 
-  it('reports that L3 is not available rather than reporting conformance', () => {
-    expect(() => validate(MODEL + '[]\n', { level: 'L3' })).toThrow(LevelNotAvailable)
+  it('reports that L4 is not available rather than reporting guidance', () => {
+    expect(() => validate(MODEL + '[]\n', { level: 'L4' })).toThrow(LevelNotAvailable)
     try {
-      validate(MODEL + '[]\n', { level: 'L3' })
+      validate(MODEL + '[]\n', { level: 'L4' })
     } catch (error) {
       expect((error as Error).message).toContain('not available')
-      expect((error as Error).message).toContain('shapes layer')
+      expect((error as Error).message).toContain('rule catalog')
     }
+  })
+
+  it('runs L3 on a model without shapes and reports nothing from it', () => {
+    const report = validate(MODEL + '[]\n', { level: 'L3' })
+    expect(report.level).toBe('L3')
+    expect(report.findings.filter((f) => f.level === 'L3')).toEqual([])
   })
 })
 

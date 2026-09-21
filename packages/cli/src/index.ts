@@ -62,8 +62,8 @@ Starting out:
   ldm init model <name> [--prefix <p>] [--base <iri>] [--out <path>]
 
 One model:
-  ldm check <model> [--level L0|L1|L2] [--json]
-  ldm emit <model> [--target context|context-inline] [--out <dir>]
+  ldm check <model> [--level L0|L1|L2|L3] [--json]
+  ldm emit <model> [--target context|context-inline|shacl] [--out <dir>]
   ldm import <context> [--out <model>]
   ldm vendor <model> [--check]
   ldm ids <model>
@@ -255,16 +255,18 @@ function check(parsed: Parsed, io: Io): number {
   const { path, text, root } = requireModel(parsed, io)
 
   const levelFlag = parsed.flags.get('level')
-  if (levelFlag === true) throw new UsageError('--level needs a value: L0, L1 or L2')
-  const level = (levelFlag ?? 'L2') as string
-  if (!isImplementedLevel(level)) {
+  if (levelFlag === true) throw new UsageError('--level needs a value: L0, L1, L2 or L3')
+  // Unset, the check runs as far as the model allows: through L3 when it
+  // declares shapes, through L2 when it does not.
+  const level = levelFlag as string | undefined
+  if (level !== undefined && !isImplementedLevel(level)) {
     if (/^L[0-4]$/.test(level)) throw new LevelNotAvailable(level)
-    throw new UsageError(`--level must be L0, L1 or L2; got "${level}"`)
+    throw new UsageError(`--level must be L0, L1, L2 or L3; got "${level}"`)
   }
 
   const { ir } = resolveModelText(text, path)
   const report = validateModel(SourceIndex.parse(text, { path }), {
-    level: level as Level,
+    ...(level !== undefined ? { level: level as Level } : {}),
     ...(ir ? { resolveContext: resolverFor(ir, root) } : {}),
     readExample: (p) => {
       const full = resolve(root, p)
@@ -314,8 +316,8 @@ function emitCommand(parsed: Parsed, io: Io): number {
 
   const targetFlag = parsed.flags.get('target') ?? 'context'
   if (targetFlag === true) throw new UsageError('--target needs a value')
-  if (targetFlag !== 'context' && targetFlag !== 'context-inline') {
-    throw new UsageError(`--target must be context or context-inline; got "${targetFlag}"`)
+  if (targetFlag !== 'context' && targetFlag !== 'context-inline' && targetFlag !== 'shacl') {
+    throw new UsageError(`--target must be context, context-inline or shacl; got "${targetFlag}"`)
   }
   const target = targetFlag as TargetName
 
@@ -346,7 +348,7 @@ function emitCommand(parsed: Parsed, io: Io): number {
     io.out(result.text)
   } else {
     const base = path.replace(/\.jsonld\.yaml$/, '').replace(/^.*\//, '')
-    const suffix = target === 'context' ? '' : '.inline'
+    const suffix = target === 'context-inline' ? '.inline' : ''
     const file = join(resolve(io.cwd(), outFlag), `${base}${suffix}${capabilitiesFor(target).extension}`)
     io.writeFile(file, result.text)
     io.out(`Wrote ${file}`)

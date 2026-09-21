@@ -62,8 +62,20 @@ export function processContext(
   const pointer = options.pointer ?? ''
   const remoteStack = options.remoteStack ?? []
 
+  // Section 4.1 step 3: a map carrying `@propagate` decides for itself, which
+  // is how an embedded context opts out of reaching nested node objects.
+  let propagate = options.propagate
+  if (
+    localContext !== null &&
+    typeof localContext === 'object' &&
+    !Array.isArray(localContext) &&
+    typeof (localContext as Record<string, unknown>)['@propagate'] === 'boolean'
+  ) {
+    propagate = (localContext as Record<string, unknown>)['@propagate'] as boolean
+  }
+
   let result = cloneContext(active)
-  if (options.propagate === false) {
+  if (propagate === false) {
     result.propagate = false
     // Section 4.1 step 4: the revert target is recorded once, on the outermost
     // non-propagating context, so a stack of scoped contexts unwinds to where

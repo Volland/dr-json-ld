@@ -127,6 +127,12 @@
         <td>Example documents by path, each with the outcome validating it must produce.</td>
       </tr>
       <tr>
+        <td><code>shapes</code></td>
+        <td>mapping to <a href="#shape">shape</a></td>
+        <td>optional</td>
+        <td>The shapes layer: class-level structure a @context cannot express — which fields a class has, how many values each takes, what they must be, and whether the class is closed. Emitted by the <code>shacl</code> target and checked at L3.</td>
+      </tr>
+      <tr>
         <td><code>views</code></td>
         <td>sequence of <a href="#view">view</a></td>
         <td>optional</td>
@@ -370,6 +376,53 @@
         <td>required</td>
         <td>—</td>
       </tr>
+      <tr>
+        <td><code>shapes</code></td>
+        <td>sequence of string</td>
+        <td>optional</td>
+        <td>Shape names this view shows.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="shape">shape</h3>
+  <p>One shape. Shapes own cardinality; terms own coercion, so a field narrows what a key's values must be but never how they are read.</p>
+  <div class="table-wrap">
+    <table>
+      <caption>shape</caption>
+      <thead><tr><th>Field</th><th>Accepts</th><th>Required</th><th>Meaning</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><code>id</code></td>
+        <td><a href="#elementId">elementId</a></td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>targetClass</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>The class this shape applies to: a class term of this model, or a class IRI. Leave it out for a shape that applies only where a field's range names it, such as an untyped nested node.<br><span class="dim">at least 1 character(s)</span></td>
+      </tr>
+      <tr>
+        <td><code>closed</code></td>
+        <td>boolean</td>
+        <td>optional</td>
+        <td>Whether a node of the target class may carry properties no field names. <code>rdf:type</code> is always allowed.</td>
+      </tr>
+      <tr>
+        <td><code>note</code></td>
+        <td>string</td>
+        <td>optional</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><code>fields</code></td>
+        <td>mapping to <a href="#field">field</a></td>
+        <td>optional</td>
+        <td>Fields keyed by the JSON key a document uses under the target class. The key resolves as a processor would resolve it there, type-scoped context first.</td>
+      </tr>
       </tbody>
     </table>
   </div>
@@ -413,8 +466,23 @@
       </tr>
       <tr>
         <td id="inlineContext"><code>inlineContext</code></td>
-        <td>null or string or object or sequence of null or string or object</td>
-        <td>A scoped context: null, an IRI, an inline object, or an array of those.</td>
+        <td>null or string or <a href="#scopedContextMap">scopedContextMap</a> or sequence of null or string or object</td>
+        <td>A scoped context: null, an IRI, a map of scoped terms, or an array of those. Only the map form holds terms of this model; the others are references.</td>
+      </tr>
+      <tr>
+        <td id="scopedContextMap"><code>scopedContextMap</code></td>
+        <td>mapping to <a href="#term">term</a> or string or null or anything</td>
+        <td>A scoped context written as a map. Each entry that is not a keyword is a scoped term with its own element id and facets, written as a term definition, a bare IRI, or null. Keyword entries (<code>@vocab</code>, <code>@protected</code>, <code>@propagate</code>, ...) are settings of the context. Entries are described rather than refused here, so a scoped context the format accepted before stays accepted; <code>ldm check</code> reports what is wrong with one.<br><span class="dim">keys match <code>^[^@]</code></span></td>
+      </tr>
+      <tr>
+        <td id="field"><code>field</code></td>
+        <td>null or object</td>
+        <td>How many values a key takes under the target class, and what they must be. An empty field constrains nothing yet.</td>
+      </tr>
+      <tr>
+        <td id="range"><code>range</code></td>
+        <td><code>&quot;iri&quot;</code>, <code>&quot;node&quot;</code>, <code>&quot;literal&quot;</code>, <code>&quot;langString&quot;</code> or string or object or object</td>
+        <td>What a field's values must be: <code>iri</code>, <code>node</code> (an IRI or blank node), <code>literal</code>, <code>langString</code>, a datatype IRI such as <code>xsd:dateTime</code>, <code>{ class: … }</code> or <code>{ shape: … }</code>.</td>
       </tr>
       </tbody>
     </table>

@@ -14,7 +14,7 @@
 import type { Finding } from '../findings/finding.js'
 import type { JsonPointer } from '../source/pointer.js'
 
-export type TargetName = 'context' | 'context-inline'
+export type TargetName = 'context' | 'context-inline' | 'shacl'
 
 /** What a capability entry can say about one aspect of a target. */
 export type CapabilityLevel =
@@ -41,8 +41,8 @@ export interface TargetCapabilities {
 }
 
 /**
- * The two targets differ in exactly one entry. Keeping the rest identical is
- * what makes the difference legible.
+ * The two context targets differ in exactly one entry. Keeping the rest
+ * identical is what makes the difference legible.
  */
 export const CAPABILITIES: Record<TargetName, TargetCapabilities> = {
   context: {
@@ -56,7 +56,11 @@ export const CAPABILITIES: Record<TargetName, TargetCapabilities> = {
       },
       { key: 'terms', level: 'full', note: 'Every term and every 1.1 facet is emitted.' },
       { key: 'prefixes', level: 'full', note: 'Prefixes and @vocab are emitted as terms.' },
-      { key: 'scoped-contexts', level: 'full', note: 'Term-scoped contexts are emitted verbatim.' },
+      {
+        key: 'scoped-contexts',
+        level: 'full',
+        note: 'Scoped contexts are emitted from their scoped terms and settings.',
+      },
       {
         key: 'documentation',
         level: 'none',
@@ -71,6 +75,11 @@ export const CAPABILITIES: Record<TargetName, TargetCapabilities> = {
         key: 'examples',
         level: 'none',
         note: 'A @context has nowhere to put an example. Examples stay in the model.',
+      },
+      {
+        key: 'shapes',
+        level: 'none',
+        note: 'A @context cannot say which fields a class has or how many values each takes. The `shacl` target carries the shapes layer.',
       },
     ],
   },
@@ -85,7 +94,11 @@ export const CAPABILITIES: Record<TargetName, TargetCapabilities> = {
       },
       { key: 'terms', level: 'full', note: 'Every term and every 1.1 facet is emitted.' },
       { key: 'prefixes', level: 'full', note: 'Prefixes and @vocab are emitted as terms.' },
-      { key: 'scoped-contexts', level: 'full', note: 'Term-scoped contexts are emitted verbatim.' },
+      {
+        key: 'scoped-contexts',
+        level: 'full',
+        note: 'Scoped contexts are emitted from their scoped terms and settings.',
+      },
       {
         key: 'documentation',
         level: 'none',
@@ -100,6 +113,55 @@ export const CAPABILITIES: Record<TargetName, TargetCapabilities> = {
         key: 'examples',
         level: 'none',
         note: 'A @context has nowhere to put an example. Examples stay in the model.',
+      },
+      {
+        key: 'shapes',
+        level: 'none',
+        note: 'A @context cannot say which fields a class has or how many values each takes. The `shacl` target carries the shapes layer.',
+      },
+    ],
+  },
+  shacl: {
+    target: 'shacl',
+    extension: '.shacl.ttl',
+    capabilities: [
+      { key: 'shapes', level: 'full', note: 'Every shape becomes a node shape, every field a property shape.' },
+      { key: 'documentation', level: 'full', note: 'Shape and field notes are emitted as sh:description.' },
+      { key: 'prefixes', level: 'full', note: 'Prefixes are emitted as Turtle prefixes.' },
+      {
+        key: 'terms',
+        level: 'none',
+        note: 'Coercion is a context fact; the shapes graph carries each field as the property its key resolves to.',
+      },
+      {
+        key: 'scoped-contexts',
+        level: 'none',
+        note: 'Scoped contexts are resolved into field paths; the contexts themselves are not carried.',
+      },
+      {
+        key: 'external-reference',
+        level: 'none',
+        note: 'Referenced contexts only decide what field keys resolve to.',
+      },
+      {
+        key: 'list-cardinality',
+        level: 'downgraded',
+        note: 'Cardinality on a @list field counts distinct members, not list positions.',
+      },
+      {
+        key: 'named-graphs',
+        level: 'none',
+        note: 'Values in a @graph container are not reached by the shapes graph.',
+      },
+      {
+        key: 'element-ids',
+        level: 'none',
+        note: 'A shapes graph has nowhere to put an element id. Identity stays in the model.',
+      },
+      {
+        key: 'examples',
+        level: 'none',
+        note: 'Examples stay in the model; L3 validates them against this graph.',
       },
     ],
   },

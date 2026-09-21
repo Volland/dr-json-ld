@@ -132,4 +132,4 @@ describe('differential over the W3C suite', () => {
 })
 
 /** Raised only alongside a fix. See `docs/conformance/differential.md`. */
-export const DIFFERENTIAL_RATCHET = 256
+export const DIFFERENTIAL_RATCHET = 261

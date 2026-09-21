@@ -1,0 +1,33 @@
+# raises: nothing
+# A shape whose field names the shape itself, and two classes that disagree
+# about how many names a thing may have: both are legal.
+jsonld: "1"
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+mode: "1.1"
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+terms:
+  Person: { id: per001, "@id": ex:Person }
+  Company: { id: com001, "@id": ex:Company }
+  name: { id: nam001, "@id": ex:name }
+  knows: { id: kno001, "@id": ex:knows, "@type": "@id" }
+shapes:
+  Person:
+    id: shp001
+    targetClass: Person
+    fields:
+      name: { max: 1 }
+      knows: { range: { shape: Person } }
+  Company:
+    id: shp002
+    targetClass: Company
+    fields:
+      name: {}
+  Thing:
+    id: shp003
+    # An absolute IRI is a class the author named deliberately.
+    targetClass: https://example.org/ns#Thing
+    fields:
+      name: {}

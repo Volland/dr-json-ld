@@ -1,0 +1,17 @@
+# raises: L1.shape-cardinality-invalid
+jsonld: "1"
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+mode: "1.1"
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+terms:
+  Person: { id: per001, "@id": ex:Person }
+  name: { id: nam001, "@id": ex:name }
+shapes:
+  Person:
+    id: shp001
+    targetClass: Person
+    fields:
+      name: { min: 2, max: 1 }

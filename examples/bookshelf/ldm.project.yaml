@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://volland.github.io/dr-json-ld/schemas/project/1/project.schema.json
+project: "1"
+name: bookshelf
+note: A small example project for trying the canvas.
+models:
+  bookshelf: bookshelf.jsonld.yaml

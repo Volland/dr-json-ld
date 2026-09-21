@@ -1,6 +1,6 @@
 {
   "name": "@json-ld-modeler/core",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "JSON-LD 1.1 processor and validator that reports what your documents silently lose, with a JSON Pointer from every result back to the line that produced it.",
   "keywords": [
     "json-ld",
@@ -55,11 +55,16 @@
     "build": "tsc --build"
   },
   "dependencies": {
+    "n3": "^2.7.12",
+    "rdf-validate-shacl": "^0.6.5",
     "yaml": "^2.6.0"
   },
   "devDependencies": {
     "@types/jsonld": "^1.5.15",
+    "@types/n3": "^1.26.4",
     "ajv": "^8.20.0",
-    "jsonld": "^8.3.2"
+    "jsonld": "^8.3.2",
+    "rdf-canonize": "^3.4.0",
+    "shacl-engine": "^1.1.2"
   }
 }

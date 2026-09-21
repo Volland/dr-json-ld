@@ -94,3 +94,14 @@ body {
 .release li span { opacity: 0.7; font-size: 0.9em; }
 .release li.unverified { color: var(--vscode-errorForeground, #b00); }
 .release .hint { opacity: 0.75; font-size: 0.9em; }
+
+/* Shapes: the class carrying its fields, and the field table. */
+.graph-node.shape { white-space: pre; text-align: left; font-family: var(--vscode-editor-font-family, monospace); }
+.cardinality { margin: 0 6px; opacity: 0.8; font-family: var(--vscode-editor-font-family, monospace); }
+.shape-inspector table.fields { width: 100%; border-collapse: collapse; }
+.shape-inspector th, .shape-inspector td { text-align: left; padding: 2px 4px; }
+.shape-inspector input[type='number'] { width: 4em; }
+.shape-inspector tr.carried-by td { font-size: 0.85em; opacity: 0.7; padding-bottom: 6px; }
+.shape-inspector tr.conflict td { background: var(--vscode-inputValidation-warningBackground, #fff4ce); }
+.shape-inspector .add-field { display: flex; gap: 6px; margin-top: var(--gap); }
+.hint { opacity: 0.75; font-size: 0.9em; }

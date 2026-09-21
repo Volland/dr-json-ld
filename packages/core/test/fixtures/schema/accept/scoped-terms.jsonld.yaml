@@ -1,0 +1,34 @@
+# Scoped contexts written as maps: every entry is a scoped term with its own
+# element id and facets, a bare IRI, or null; keyword entries are settings.
+jsonld: "1"
+
+namespace:
+  prefix: cred
+  base: https://example.org/credentials#
+
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+
+terms:
+  VerifiableCredential:
+    id: vc0001
+    "@id": cred:VerifiableCredential
+    "@context":
+      "@protected": true
+      id: "@id"
+      issuer:
+        id: is0001
+        "@id": cred:issuer
+        "@type": "@id"
+      validFrom: { id: vf0001, "@id": cred:validFrom, "@type": xsd:dateTime }
+      evidence:
+        id: ev0001
+        "@id": cred:evidence
+        "@context":
+          kind: cred:evidenceKind
+      withdrawn: null
+
+  holder:
+    id: ho0001
+    "@id": cred:holder
+    "@context": https://example.org/holder.jsonld

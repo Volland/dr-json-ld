@@ -1,0 +1,17 @@
+# raises: L1.shape-field-is-nest
+jsonld: "1"
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+mode: "1.1"
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+terms:
+  Person: { id: per001, "@id": ex:Person }
+  details: { id: det001, "@id": "@nest" }
+shapes:
+  Person:
+    id: shp001
+    targetClass: Person
+    fields:
+      details: { min: 1 }

@@ -112,6 +112,7 @@ export type TraceEvent =
   | { kind: 'value-coercion'; term: string; coercion: string; pointer: JsonPointer }
   | { kind: 'key-dropped'; key: string; reason: 'no-term' | 'keyword-like' | 'null-mapping'; pointer: JsonPointer }
   | { kind: 'blank-node-minted'; id: string; pointer: JsonPointer }
+  | { kind: 'emit-triple'; subject: string; predicate: string; object: string; pointer: JsonPointer }
 
 /** What a caller installs to observe the algorithm. */
 export interface Instrumentation {

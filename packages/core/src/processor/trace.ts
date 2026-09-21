@@ -90,6 +90,8 @@ function describe(event: TraceEvent): string {
       return `key "${event.key}" is dropped (${describeDrop(event.reason)})`
     case 'blank-node-minted':
       return `a blank node ${event.id} is minted here`
+    case 'emit-triple':
+      return `triple ${event.subject} ${event.predicate} ${event.object}`
   }
 }
 

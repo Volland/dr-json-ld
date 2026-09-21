@@ -5,7 +5,7 @@
  * This package never imports `vscode`.
  * @lat: [[architecture#Architecture#Package Boundary]]
  */
-export const CORE_VERSION = '0.3.1'
+export const CORE_VERSION = '0.4.0'
 
 // ---- findings --------------------------------------------------------------
 export {
@@ -44,15 +44,24 @@ export {
 export {
   CONTAINER_VALUES,
   derivedIdElements,
+  findShape,
   findTerm,
   resolutionPrefixes,
+  scopedTermsOf,
+  termPath,
+  topLevelTerms,
   type ContainerValue,
   type ExampleExpectation,
   type InlineContext,
   type Ir,
   type IrExample,
   type IrNamespace,
+  type IrField,
+  type IrRange,
+  type IrScopedContext,
+  type IrShape,
   type IrTerm,
+  type IrTermScope,
   type IrUses,
   type IrView,
   type ProcessingMode,
@@ -139,7 +148,12 @@ export {
   type TargetName,
 } from './emit/capability.js'
 export { emit, parseArtifact, stripComments, type EmitOptions, type EmitResult } from './emit/emit.js'
-export { buildContextDocument, buildOwnLayer, buildTermDefinition } from './emit/context-document.js'
+export {
+  buildContextDocument,
+  buildOwnLayer,
+  buildTermDefinition,
+  termContextValue,
+} from './emit/context-document.js'
 
 // ---- import ----------------------------------------------------------------
 export { importContext, type ImportOptions, type ImportResult, type NotRecovered } from './import/import.js'
@@ -327,3 +341,42 @@ export {
   type Format,
   type RenderedFile,
 } from './skills/render.js'
+
+// ---- the shapes layer ------------------------------------------------------
+export {
+  addFieldSplice,
+  addShapeSplice,
+  removeFieldSplice,
+  renameReferenceSplices,
+  renderFieldSpec,
+  setFieldSplice,
+  setShapeSplice,
+  ShapeEditError,
+  writtenIds,
+  type FieldSpec,
+  type RangeSpec,
+} from './edit/shape-edits.js'
+export {
+  modelActiveContext,
+  resolveFieldKey,
+  resolveShapeFields,
+  resolveShapeFieldsIn,
+  shapeContext,
+  type FieldResolution,
+} from './shapes/fields.js'
+export { emitShacl, shapeIri, type ShaclEmitOptions, type ShaclEmitResult } from './emit/shacl.js'
+export {
+  checkConformance,
+  prepareShapes,
+  runShapes,
+  type PreparedShapes,
+} from './validate/conformance.js'
+export {
+  toNQuads,
+  toRdf,
+  type QuadPointers,
+  type RdfQuad,
+  type RdfTerm,
+  type ToRdfOptions,
+  type TracedQuad,
+} from './processor/to-rdf.js'

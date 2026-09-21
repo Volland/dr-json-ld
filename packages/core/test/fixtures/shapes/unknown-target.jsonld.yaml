@@ -1,0 +1,17 @@
+# raises: L1.shape-unknown-target
+# The target class is neither a term nor an IRI whose prefix is declared.
+jsonld: "1"
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+mode: "1.1"
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+terms:
+  name: { id: nam001, "@id": ex:name }
+shapes:
+  Thing:
+    id: shp001
+    targetClass: nope:Thing
+    fields:
+      name: {}

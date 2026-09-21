@@ -98,7 +98,8 @@ describe('two coordinated panes', () => {
     const projection = projectionOf(MODEL)
     const panes = derivePanes(projection, projection.views[0]!.id)
     expect(panes.tree.length).toBeGreaterThan(0)
-    expect(panes.graph.nodes).toHaveLength(projection.terms.length)
+    // A scoped term is its own node: its key may name another term elsewhere.
+    expect(panes.graph.nodes).toHaveLength(projection.terms.length + projection.scopedTerms.length)
     // One selection key serves both panes.
     const treeIds = new Set(collectIds(panes.tree))
     for (const node of panes.graph.nodes) {

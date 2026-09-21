@@ -25,11 +25,21 @@ and changes no triple, a `@nest` that vanishes on expansion, a scoped context
 that makes one key mean two things. A facet that exists on only one side is
 drawn as visibly absent on the other rather than as nothing.
 
+**Shapes, and scoped contexts you can edit.** A scoped context written as a
+map holds terms of its own, each with an id and facets, so a credential's
+protected type-scoped context is something the canvas edits rather than a blob.
+`shapes:` says which fields a class has, how many values each takes and what
+they must be — class structure a `@context` cannot express. `ldm emit --target
+shacl` writes it as a SHACL shapes graph, and the canvas builds it as a field
+table beside the JSON skeleton a conforming document takes.
+
 **A validation ladder.** L0 well-formedness, L1 context errors located at the
-term in your model rather than in a generated artifact, and L2 lossiness: keys
+term in your model rather than in a generated artifact, L2 lossiness: keys
 that expanded to nothing, IRIs left relative, blank nodes minted where an
-identifier was expected, coercion that did not fire. Every finding carries a
-stable rule id, a JSON Pointer and a line and column.
+identifier was expected, coercion that did not fire. And L3 conformance, when
+the model has shapes: a SHACL engine runs the emitted shapes graph over each
+example, and every violation is reported at the value or key in the document.
+Every finding carries a stable rule id, a JSON Pointer and a line and column.
 
 **Vendored contexts.** `ldm vendor` fetches each referenced context once into a
 committed directory and records its hash. Every other command runs with the
@@ -70,8 +80,9 @@ Or start from a context you already have:
 ```bash
 ldm import schema-subset.jsonld --out vocabulary.jsonld.yaml   # bring your own context
 ldm vendor vocabulary.jsonld.yaml                              # the one command that fetches
-ldm check vocabulary.jsonld.yaml                               # what your examples lose
+ldm check vocabulary.jsonld.yaml                               # what your examples lose, and whether they conform
 ldm emit vocabulary.jsonld.yaml --out build                    # generate the @context
+ldm emit vocabulary.jsonld.yaml --target shacl --out build     # generate the shapes graph
 ldm explain vocabulary.jsonld.yaml doc.json --trace            # why it means that
 ```
 
@@ -168,15 +179,15 @@ are regenerated into `docs/conformance/`; the conclusions, including which
 implementation was right for each divergence, are in the project config's
 measured-behaviour section.
 
-Cases that do not pass are listed with a reason. `frame`, `toRdf`, `fromRdf`,
-`flatten` and `html` are out of scope for this release and are reported as such
-rather than skipped silently.
+Cases that do not pass are listed with a reason. `frame`, `fromRdf`, `flatten`
+and `html` are out of scope for this release and are reported as such rather
+than skipped silently.
 
 ## What this release does not do
 
-The shapes layer and everything that consumes it: SHACL, framing, JSON Schema,
-the vocabulary document, generated types, the docs site. Validation L3 and L4.
-RDF to JSON-LD conversion. The optional LLM layer and the hosted playground.
+Framing, JSON Schema, the vocabulary document, generated types, the docs site.
+The instance-graph overlay on the canvas. Validation L4. RDF to JSON-LD
+conversion. The optional LLM layer and the hosted playground.
 
 It also does not upload to a host, fetch from a remote registry, or sign
 anything. A checksum detects accident and casual tampering; it is not a

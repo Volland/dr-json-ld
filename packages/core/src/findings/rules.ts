@@ -254,12 +254,133 @@ export const RULES = {
     'The model defines a term no view includes, so it cannot be seen on any diagram.',
   ),
 
+  // ---- The shapes layer ---------------------------------------------------
+  'L0.view-unknown-shape': def(
+    'L0.view-unknown-shape',
+    'L0',
+    'error',
+    'A view names a shape the model does not declare.',
+  ),
+  'L1.shape-unknown-target': def(
+    'L1.shape-unknown-target',
+    'L1',
+    'error',
+    "A shape's target class is neither a term of this model nor a resolvable IRI.",
+  ),
+  'L1.shape-unknown-class': def(
+    'L1.shape-unknown-class',
+    'L1',
+    'error',
+    "A field's class range is neither a term of this model nor a resolvable IRI.",
+  ),
+  'L1.shape-unknown-shape': def(
+    'L1.shape-unknown-shape',
+    'L1',
+    'error',
+    "A field's range names a shape the model does not declare.",
+  ),
+  'L1.shape-field-unresolved': def(
+    'L1.shape-field-unresolved',
+    'L1',
+    'error',
+    'A field key resolves to no term under its target class, and no @vocab applies.',
+  ),
+  'L1.shape-field-is-nest': def(
+    'L1.shape-field-is-nest',
+    'L1',
+    'error',
+    'A field key names a @nest term, which groups properties and is not one.',
+  ),
+  'L1.shape-cardinality-invalid': def(
+    'L1.shape-cardinality-invalid',
+    'L1',
+    'error',
+    "A field's minimum is above its maximum.",
+  ),
+  'L1.shape-range-coercion-conflict': def(
+    'L1.shape-range-coercion-conflict',
+    'L1',
+    'error',
+    "A field's range contradicts how its term coerces values. Shapes own cardinality; terms own coercion.",
+  ),
+  'L1.shape-range-needs-id-coercion': def(
+    'L1.shape-range-needs-id-coercion',
+    'L1',
+    'warning',
+    'A field expects a node, but its term has no @type: @id, so a string value becomes a literal.',
+  ),
+  'L1.shape-field-ambiguous': def(
+    'L1.shape-field-ambiguous',
+    'L1',
+    'error',
+    'A field key means different properties depending on where the shape is reached from.',
+  ),
+  'L2.shape-unused-in-view': def(
+    'L2.shape-unused-in-view',
+    'L2',
+    'info',
+    'The model declares a shape no view includes, so it cannot be seen on any diagram.',
+  ),
+
+  // ---- L3 shape conformance -------------------------------------------------
+  'L3.min-count': def(
+    'L3.min-count',
+    'L3',
+    'error',
+    'A node has fewer values for a field than its shape requires.',
+  ),
+  'L3.max-count': def(
+    'L3.max-count',
+    'L3',
+    'error',
+    'A node has more values for a field than its shape allows.',
+  ),
+  'L3.datatype': def('L3.datatype', 'L3', 'error', "A value is not of the field's datatype."),
+  'L3.node-kind': def(
+    'L3.node-kind',
+    'L3',
+    'error',
+    'A value is a literal where a node was required, or the reverse.',
+  ),
+  'L3.class': def('L3.class', 'L3', 'error', "A value is not typed with the field's class."),
+  'L3.node': def('L3.node', 'L3', 'error', 'A value does not conform to the nested shape.'),
+  'L3.closed': def(
+    'L3.closed',
+    'L3',
+    'error',
+    'A node of a closed shape carries a property no field names.',
+  ),
+  'L3.no-target': def(
+    'L3.no-target',
+    'L3',
+    'info',
+    'No node in the document is an instance of any shape’s target class, so nothing was checked.',
+  ),
+
   // ---- Emit downgrades ----------------------------------------------------
   'L1.downgrade-external-reference-forked': def(
     'L1.downgrade-external-reference-forked',
     'L1',
     'warning',
     'A target absorbed a referenced context, forking the upstream vocabulary.',
+  ),
+  'L1.downgrade-shacl-list-cardinality': def(
+    'L1.downgrade-shacl-list-cardinality',
+    'L1',
+    'warning',
+    'SHACL counts the distinct members of a @list, not its positions, so the cardinality is approximate.',
+  ),
+  'L1.downgrade-shacl-graph-container': def(
+    'L1.downgrade-shacl-graph-container',
+    'L1',
+    'warning',
+    'A field on a @graph container cannot be checked: its values are in a named graph.',
+  ),
+  'L1.shacl-no-shapes': def(
+    'L1.shacl-no-shapes',
+    'L1',
+    'info',
+    'The model declares no shapes, so the shapes graph is empty.',
   ),
   'L1.downgrade-facet-unsupported': def(
     'L1.downgrade-facet-unsupported',

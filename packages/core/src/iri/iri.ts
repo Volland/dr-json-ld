@@ -87,43 +87,128 @@ export function resolveIri(base: string | undefined, reference: string): string 
   if (reference === '') return base ?? ''
   if (isAbsoluteIri(reference)) return reference
   if (!base) return reference
-  try {
-    return new URL(reference, base).href
-  } catch {
-    return resolveManually(base, reference)
-  }
+  return resolveReference(base, reference)
 }
 
 /**
- * `new URL` refuses a base whose scheme it does not know, and vocabulary IRIs
- * routinely use schemes it does not know. This is the RFC 3986 merge for the
- * cases that matter: a fragment, a query, an absolute path, and a relative path.
+ * RFC 3986 section 5.2: reference resolution, done on the strings themselves.
+ *
+ * `new URL` is a WHATWG URL parser, not an RFC 3986 resolver: it percent-encodes
+ * characters an IRI may carry, lower-cases hosts and appends a slash to an
+ * authority with no path — `//g` against `http://a/b` becomes `http://g/` where
+ * RFC 3986 says `http://g`. Each of those changes an IRI, which changes a triple.
  */
-function resolveManually(base: string, reference: string): string {
-  if (reference.startsWith('#')) {
-    const hash = base.indexOf('#')
-    return (hash === -1 ? base : base.slice(0, hash)) + reference
-  }
-  if (reference.startsWith('?')) {
-    const cut = base.search(/[?#]/)
-    return (cut === -1 ? base : base.slice(0, cut)) + reference
-  }
-  const stripped = base.replace(/[?#].*$/, '')
-  if (reference.startsWith('/')) {
-    const schemeEnd = stripped.indexOf(':')
-    const afterScheme = stripped.slice(schemeEnd + 1)
-    if (afterScheme.startsWith('//')) {
-      const authorityEnd = afterScheme.indexOf('/', 2)
-      const authority =
-        authorityEnd === -1 ? afterScheme : afterScheme.slice(0, authorityEnd)
-      return `${stripped.slice(0, schemeEnd + 1)}${authority}${reference}`
+function resolveReference(base: string, reference: string): string {
+  const r = parseReference(reference)
+  const b = parseReference(base)
+  let scheme: string | undefined
+  let authority: string | undefined
+  let path: string
+  let query: string | undefined
+
+  if (r.scheme !== undefined) {
+    scheme = r.scheme
+    authority = r.authority
+    path = removeDotSegments(r.path)
+    query = r.query
+  } else {
+    if (r.authority !== undefined) {
+      authority = r.authority
+      path = removeDotSegments(r.path)
+      query = r.query
+    } else {
+      if (r.path === '') {
+        path = b.path
+        query = r.query !== undefined ? r.query : b.query
+      } else {
+        if (r.path.startsWith('/')) {
+          path = removeDotSegments(r.path)
+        } else {
+          path = removeDotSegments(mergePaths(b, r.path))
+        }
+        query = r.query
+      }
+      authority = b.authority
     }
-    return `${stripped.slice(0, schemeEnd + 1)}${reference}`
+    scheme = b.scheme
   }
-  // A relative path replaces the last segment.
-  const lastSlash = stripped.lastIndexOf('/')
-  if (lastSlash === -1) return stripped + reference
-  return `${stripped.slice(0, lastSlash + 1)}${reference}`
+
+  let out = ''
+  if (scheme !== undefined) out += `${scheme}:`
+  if (authority !== undefined) out += `//${authority}`
+  out += path
+  if (query !== undefined) out += `?${query}`
+  if (r.fragment !== undefined) out += `#${r.fragment}`
+  return out
+}
+
+interface ReferenceParts {
+  scheme?: string
+  authority?: string
+  path: string
+  query?: string
+  fragment?: string
+}
+
+/** RFC 3986 appendix B. */
+function parseReference(value: string): ReferenceParts {
+  const m = /^(?:([^:/?#]+):)?(?:\/\/([^/?#]*))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?$/.exec(value)!
+  return {
+    ...(m[1] !== undefined ? { scheme: m[1] } : {}),
+    ...(m[2] !== undefined ? { authority: m[2] } : {}),
+    path: m[3] ?? '',
+    ...(m[4] !== undefined ? { query: m[4] } : {}),
+    ...(m[5] !== undefined ? { fragment: m[5] } : {}),
+  }
+}
+
+/** RFC 3986 section 5.2.3. */
+function mergePaths(base: ReferenceParts, path: string): string {
+  if (base.authority !== undefined && base.path === '') return `/${path}`
+  const lastSlash = base.path.lastIndexOf('/')
+  return lastSlash === -1 ? path : base.path.slice(0, lastSlash + 1) + path
+}
+
+/** RFC 3986 section 5.2.4. */
+function removeDotSegments(path: string): string {
+  let input = path
+  let output = ''
+  while (input.length > 0) {
+    if (input.startsWith('../')) input = input.slice(3)
+    else if (input.startsWith('./')) input = input.slice(2)
+    else if (input.startsWith('/./')) input = input.slice(2)
+    else if (input === '/.') input = '/'
+    else if (input.startsWith('/../')) {
+      input = input.slice(3)
+      output = output.slice(0, Math.max(0, output.lastIndexOf('/')))
+    } else if (input === '/..') {
+      input = '/'
+      output = output.slice(0, Math.max(0, output.lastIndexOf('/')))
+    } else if (input === '.' || input === '..') input = ''
+    else {
+      const start = input.startsWith('/') ? 1 : 0
+      const next = input.indexOf('/', start)
+      const segment = next === -1 ? input : input.slice(0, next)
+      output += segment
+      input = next === -1 ? '' : input.slice(next)
+    }
+  }
+  return output
+}
+
+/**
+ * Whether an absolute IRI can stand in an RDF dataset: no whitespace and none
+ * of the characters RFC 3987 excludes. A string can pass {@link isAbsoluteIri}
+ * and still fail this, which is how a document with a bad `@base` loses a
+ * triple rather than asserting a broken one.
+ */
+export function isWellFormedIri(value: string): boolean {
+  // A fragment cannot itself contain `#`, so a second one is never an IRI.
+  return (
+    isAbsoluteIri(value) &&
+    ![...value].some((c) => c.charCodeAt(0) <= 0x20 || '<>"{}|\\^`'.includes(c)) &&
+    value.indexOf('#') === value.lastIndexOf('#')
+  )
 }
 
 /**

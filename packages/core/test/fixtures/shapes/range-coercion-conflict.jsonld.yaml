@@ -1,0 +1,18 @@
+# raises: L1.shape-range-coercion-conflict
+# A datatype range on a key coerced to a reference.
+jsonld: "1"
+namespace:
+  prefix: ex
+  base: https://example.org/ns#
+mode: "1.1"
+prefixes:
+  xsd: http://www.w3.org/2001/XMLSchema#
+terms:
+  Credential: { id: cre001, "@id": ex:Credential }
+  validFrom: { id: vfr001, "@id": ex:validFrom, "@type": "@id" }
+shapes:
+  Credential:
+    id: shp001
+    targetClass: Credential
+    fields:
+      validFrom: { range: xsd:dateTime }

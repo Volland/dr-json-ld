@@ -180,6 +180,12 @@ function expandObject(
 ): unknown {
   let active = activeIn
 
+  // Step 3 — the property-scoped context is read from the context the property
+  // was expanded in, *before* step 7 reverts it. A term defined by a type-scoped
+  // context keeps its own scoped context even though the type-scoped context
+  // itself stops applying at this node.
+  const propertyDefinition = activeProperty ? termDefinition(activeIn, activeProperty) : undefined
+
   // Step 7 — a non-propagating scoped context stops applying on entering a new
   // node object. A value object and a bare node reference are not new node
   // objects, and neither is an entry reached from a map, so all three keep it.
@@ -200,7 +206,6 @@ function expandObject(
   }
 
   // 8 — a property-scoped context applies before the object's own.
-  const propertyDefinition = activeProperty ? termDefinition(active, activeProperty) : undefined
   if (propertyDefinition?.localContext !== undefined) {
     active = enterScope(state, propertyDefinition, active, pointer, 'property-scoped')
   }

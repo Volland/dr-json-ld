@@ -63,9 +63,37 @@ export interface TermFacets {
   '@index'?: string
 }
 
+/**
+ * Where a scoped term lives: inside the map-valued `@context` of another term.
+ * A top-level term has no scope.
+ */
+export interface IrTermScope {
+  /** Element id of the term whose `@context` map holds this one. */
+  parent: string
+}
+
+/**
+ * A map-valued scoped context, as held by the term that carries it. Its term
+ * definitions are terms in their own right, in {@link Ir.terms} with a
+ * {@link IrTermScope} naming this term; what remains here are the context's
+ * keyword entries (`@vocab`, `@propagate`, `@protected`, …), which are settings
+ * of the context rather than terms.
+ */
+export interface IrScopedContext {
+  settings: Record<string, unknown>
+}
+
 export interface IrTerm extends ElementIdentity, TermFacets {
   /** The JSON key consumers write. */
   key: string
+  /** Present on a scoped term: the term whose `@context` map holds it. */
+  scope?: IrTermScope
+  /**
+   * Present when this term's `@context` is a map. `@context` itself is then
+   * absent from the facets, because the map is carried by the scoped terms and
+   * these settings rather than as an opaque value.
+   */
+  scopedContext?: IrScopedContext
   /** The IRI the key maps to, after prefix and @vocab resolution. */
   iri: string | null
   /** Any construct the metamodel has not yet named. Reaches the context unchanged. */
@@ -98,6 +126,72 @@ export interface IrView extends ElementIdentity {
   note?: string
   /** Term keys this view shows. */
   terms: string[]
+  /** Shape names this view shows. Absent when the view names none. */
+  shapes?: string[]
+  pointer: JsonPointer
+}
+
+/**
+ * What a field's values must be. The forms that name something carry both what
+ * the author wrote and what it resolved to.
+ */
+export type IrRange =
+  | { kind: 'iri' }
+  | { kind: 'node' }
+  | { kind: 'literal' }
+  | { kind: 'langString' }
+  | { kind: 'datatype'; datatype: string; iri: string }
+  | { kind: 'class'; class: string; iri: string | null }
+  /** `shapeId` is the element id of the named shape; `null` when it names none. */
+  | { kind: 'shape'; shape: string; shapeId: string | null }
+
+/**
+ * One field of a shape. It has no element id of its own: its identity is its
+ * shape plus the term its key resolves to, which is what makes a term rename
+ * carry the field with it.
+ */
+export interface IrField {
+  /** The JSON key a document uses under the target class. */
+  key: string
+  /**
+   * The element id of the model term the key resolves to under the target
+   * class, or `null` when it resolves through `@vocab`, a referenced context, or
+   * not at all.
+   */
+  termId: string | null
+  /** The property the field constrains. `null` when the key resolves to nothing. */
+  iri: string | null
+  /** Whether the key names a `@reverse` term, so the field constrains the inverse. */
+  inverse: boolean
+  /** Minimum number of values. Absent means zero. */
+  min?: number
+  /** Maximum number of values. Absent means unbounded. */
+  max?: number
+  range?: IrRange
+  note?: string
+  pointer: JsonPointer
+}
+
+/**
+ * Class-level structure a `@context` cannot express: which fields a class has,
+ * how many values each takes, what they must be, and whether the class is
+ * closed.
+ */
+export interface IrShape extends ElementIdentity {
+  /** The key under `shapes:`. */
+  name: string
+  /**
+   * The target class as written: a term key or an IRI. Absent on a shape that
+   * applies only where a field's range names it, such as an untyped nested node.
+   */
+  target?: string
+  /** The class IRI the target resolves to; `null` without a target or when it names none. */
+  targetIri: string | null
+  /** The element id of the class term, when the target names one. */
+  targetTermId?: string
+  closed: boolean
+  note?: string
+  fields: IrField[]
   pointer: JsonPointer
 }
 
@@ -128,16 +222,21 @@ export interface Ir {
   prefixes: Record<string, string>
   uses: IrUses[]
   terms: IrTerm[]
+  /** The shapes layer. Empty when the model declares no shapes. */
+  shapes: IrShape[]
   examples: IrExample[]
   views: IrView[]
   /** The model file this IR was resolved from. Not part of the canonical form. */
   source: string
 }
 
-/** Terms whose id was derived rather than written. */
+/** Elements whose id was derived rather than written. */
 export function derivedIdElements(ir: Ir): Array<{ kind: string; id: string; key: string }> {
   const out: Array<{ kind: string; id: string; key: string }> = []
-  for (const t of ir.terms) if (!t.idWritten) out.push({ kind: 'term', id: t.id, key: t.key })
+  for (const t of ir.terms) {
+    if (!t.idWritten) out.push({ kind: 'term', id: t.id, key: termPath(ir, t) })
+  }
+  for (const s of ir.shapes ?? []) if (!s.idWritten) out.push({ kind: 'shape', id: s.id, key: s.name })
   for (const e of ir.examples) if (!e.idWritten) out.push({ kind: 'example', id: e.id, key: e.path })
   for (const v of ir.views) if (!v.idWritten) out.push({ kind: 'view', id: v.id, key: v.name })
   return out
@@ -150,6 +249,42 @@ export function resolutionPrefixes(ir: Ir): Record<string, string> {
   return out
 }
 
+/**
+ * The top-level term with this key. A scoped term with the same key is a
+ * different term, reached through {@link scopedTermsOf}.
+ */
 export function findTerm(ir: Ir, key: string): IrTerm | undefined {
-  return ir.terms.find((t) => t.key === key)
+  return ir.terms.find((t) => t.key === key && t.scope === undefined)
+}
+
+/** Terms declared directly in the model's `terms:` map, in declaration order. */
+export function topLevelTerms(ir: Ir): IrTerm[] {
+  return ir.terms.filter((t) => t.scope === undefined)
+}
+
+/** The scoped terms held by one term's `@context` map, in declaration order. */
+export function scopedTermsOf(ir: Ir, parentId: string): IrTerm[] {
+  return ir.terms.filter((t) => t.scope?.parent === parentId)
+}
+
+/**
+ * The chain of keys from the top level down to this term, for messages: a
+ * scoped `name` under `publisher` reads as `publisher › name`.
+ */
+export function termPath(ir: Ir, term: IrTerm): string {
+  const keys = [term.key]
+  let current = term
+  const seen = new Set<string>([term.id])
+  while (current.scope !== undefined) {
+    const parent = ir.terms.find((t) => t.id === current.scope!.parent)
+    if (parent === undefined || seen.has(parent.id)) break
+    seen.add(parent.id)
+    keys.unshift(parent.key)
+    current = parent
+  }
+  return keys.join(' › ')
+}
+
+export function findShape(ir: Ir, name: string): IrShape | undefined {
+  return (ir.shapes ?? []).find((shape) => shape.name === name)
 }

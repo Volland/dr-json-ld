@@ -1,12 +1,22 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 import { emit, stripComments } from '../src/emit/emit.js'
 import { importContext } from '../src/import/import.js'
-import { derivedIdElements } from '../src/model/ir.js'
+import { derivedIdElements, scopedTermsOf, termPath } from '../src/model/ir.js'
 import { resolveModelText } from '../src/model/resolve.js'
 import { SourceIndex } from '../src/source/index-file.js'
 
 const UPSTREAM = 'https://example.org/vocab/core.jsonld'
+
+/** A trimmed context in the shape of Verifiable Credentials 2.0. */
+const CREDENTIALS = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL('./fixtures/import/credentials-v2-like.jsonld', import.meta.url)),
+    'utf8',
+  ),
+) as { '@context': Record<string, unknown> }
 
 function build(text: string) {
   const source = SourceIndex.parse(text, { path: 'model.jsonld.yaml' })
@@ -43,6 +53,7 @@ describe('importing a context', () => {
     const { ir, findings } = build(text)
     expect(findings.filter((f) => f.severity === 'error')).toEqual([])
     expect(ir).toBeDefined()
+    // Every term, scoped ones included.
     expect(termCount).toBe(ir!.terms.length)
 
     expect(ir!.vocab).toBe('https://example.org/ns#')
@@ -54,7 +65,10 @@ describe('importing a context', () => {
     expect(term('tags')['@container']).toEqual(['@set'])
     expect(term('label')['@container']).toEqual(['@language'])
     expect(term('locked')['@protected']).toBe(true)
-    expect(term('detail')['@context']).toEqual({ name: 'https://example.org/ns#innerName' })
+    const detail = term('detail')
+    expect(detail.scopedContext).toEqual({ settings: {} })
+    const inner = scopedTermsOf(ir!, detail.id)
+    expect(inner.map((t) => [t.key, t.iri])).toEqual([['name', 'https://example.org/ns#innerName']])
     expect(term('isKnownBy')['@reverse']).toBe('https://example.org/ns#knows')
   })
 
@@ -81,6 +95,47 @@ describe('importing a context', () => {
     expect(ir!.uses[0]!.iri).toBe(UPSTREAM)
     expect(ir!.uses[0]!.integrity).toBeUndefined()
     expect(text).toContain('integrity is written by `ldm vendor`')
+  })
+})
+
+describe('importing a credential context', () => {
+  it('imports a protected type-scoped context as scoped terms, each with a written id', () => {
+    const { text } = importContext(CREDENTIALS)
+    const { ir, findings } = build(text)
+    expect(findings.filter((f) => f.severity === 'error')).toEqual([])
+    const vc = ir!.terms.find((t) => t.key === 'VerifiableCredential' && !t.scope)!
+    const scoped = scopedTermsOf(ir!, vc.id)
+    expect(scoped.map((t) => t.key)).toEqual([
+      'id',
+      'type',
+      'credentialSchema',
+      'credentialStatus',
+      'credentialSubject',
+      'evidence',
+      'issuer',
+      'validFrom',
+      'validUntil',
+    ])
+    expect(scoped.every((t) => t.idWritten)).toBe(true)
+    expect(vc.scopedContext!.settings['@protected']).toBe(true)
+    const validFrom = scoped.find((t) => t.key === 'validFrom')!
+    expect(validFrom['@type']).toBe('http://www.w3.org/2001/XMLSchema#dateTime')
+    expect(derivedIdElements(ir!)).toEqual([])
+  })
+
+  it('keeps a null scoped context as a reference', () => {
+    const { text } = importContext(CREDENTIALS)
+    const { ir } = build(text)
+    const vp = ir!.terms.find((t) => termPath(ir!, t) === 'VerifiablePresentation › verifiableCredential')!
+    expect(vp['@context']).toBeNull()
+    expect(vp.scopedContext).toBeUndefined()
+  })
+
+  it('invents no shape, and says so', () => {
+    const { text, notRecovered } = importContext(CREDENTIALS)
+    expect(text).not.toContain('shapes:')
+    const membership = notRecovered.find((n) => n.kind === 'class-membership')!
+    expect(membership.message).toContain('no shape was invented')
   })
 })
 
@@ -155,6 +210,24 @@ describe('round trip', () => {
     semanticEquality(emitted.document['@context'], simple['@context'])
   })
 
+  it('a credential context round-trips, scoped contexts included', () => {
+    const { text } = importContext(CREDENTIALS)
+    const { ir, source } = build(text)
+    const emitted = emit(ir!, { target: 'context', source })
+    // A context-level `@protected` is reported rather than spread over the
+    // terms (see the vocab-intent gap), so the top level is compared without it.
+    const { '@protected': _top, ...expected } = CREDENTIALS['@context']
+    semanticEquality(emitted.document['@context'], expected)
+  })
+
+  it('a credential context reaches a byte-identical fixed point', () => {
+    const firstBuild = build(importContext(CREDENTIALS).text)
+    const firstEmit = emit(firstBuild.ir!, { target: 'context', source: firstBuild.source })
+    const secondBuild = build(importContext(JSON.parse(stripComments(firstEmit.text))).text)
+    const secondEmit = emit(secondBuild.ir!, { target: 'context', source: secondBuild.source })
+    expect(stripComments(secondEmit.text)).toBe(stripComments(firstEmit.text))
+  })
+
   it('a layered context keeps its reference in the emitted artifact', () => {
     const layered = { '@context': [UPSTREAM, { local: 'https://example.org/ns#local' }] }
     const { text } = importContext(layered)
@@ -200,11 +273,17 @@ function normalizeContext(value: unknown): Record<string, unknown> {
     Object.assign(source, raw ?? {})
     for (const facet of Object.keys(source).sort()) {
       const facetValue = source[facet]
-      // A one-element container list and a bare container mean the same thing.
+      // A one-element container list and a bare container mean the same thing,
+      // and a scoped context map is compared the same way as the outer one.
       entry[facet] =
         facet === '@container' && Array.isArray(facetValue) && facetValue.length === 1
           ? facetValue[0]
-          : facetValue
+          : facet === '@context' &&
+              facetValue !== null &&
+              typeof facetValue === 'object' &&
+              !Array.isArray(facetValue)
+            ? normalizeContext(facetValue)
+            : facetValue
     }
     out[key] = entry
   }

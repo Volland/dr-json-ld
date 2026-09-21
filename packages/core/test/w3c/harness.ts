@@ -16,10 +16,10 @@ export const SUITE_DIR = fileURLToPath(new URL('../fixtures/w3c/', import.meta.u
 /** The suite's own base, which every case's IRIs are relative to. */
 export const SUITE_BASE = 'https://w3c.github.io/json-ld-api/tests/'
 
-export type SuiteClass = 'expand' | 'compact' | 'remote-doc'
+export type SuiteClass = 'expand' | 'compact' | 'remote-doc' | 'toRdf'
 
 /** Classes this change does not implement. Reported, never silently skipped. */
-export const OUT_OF_SCOPE_CLASSES = ['frame', 'toRdf', 'fromRdf', 'flatten', 'html'] as const
+export const OUT_OF_SCOPE_CLASSES = ['frame', 'fromRdf', 'flatten', 'html'] as const
 
 export interface SuiteCase {
   id: string
@@ -45,7 +45,7 @@ export function loadManifest(suiteClass: SuiteClass): SuiteCase[] {
       id: String(entry['@id']),
       name: String(entry['name'] ?? entry['@id']),
       ...(entry['purpose'] !== undefined ? { purpose: String(entry['purpose']) } : {}),
-      positive: types.includes('jld:PositiveEvaluationTest'),
+      positive: types.includes('jld:PositiveEvaluationTest') || types.includes('jld:PositiveSyntaxTest'),
       input: String(entry['input']),
       ...(entry['expect'] !== undefined ? { expect: String(entry['expect']) } : {}),
       ...(entry['context'] !== undefined ? { context: String(entry['context']) } : {}),

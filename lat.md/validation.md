@@ -8,7 +8,11 @@ Saying this plainly matters more than it would elsewhere. Users arrive expecting
 
 The levels run L0 to L4, from the question every JSON parser answers to the question only an opinionated tool can. A command names the highest level it runs, and findings always record which level produced them.
 
-Levels are separable because their dependencies differ: L0 and L1 need only the document and the context, L2 needs [[processing#Source Mapping]], L3 needs the [[metamodel#Shapes|shapes layer]] and a SHACL engine, and L4 needs the [[validation#Rule Catalog]]. Milestone 1 ships L0 to L2, which is exactly the set that needs no shapes.
+Levels are separable because their dependencies differ: L0 and L1 need only the document and the context, L2 needs [[processing#Source Mapping]], L3 needs the [[metamodel#Shapes|shapes layer]] and a SHACL engine, and L4 needs the [[validation#Rule Catalog]]. L0 to L3 ship; L4 waits on the catalog.
+
+Unset, a check runs as far as the model allows: through L3 when it declares shapes, through L2 when it does not. A model gaining a shape therefore turns every positive example into a conformance test, which is the point of declaring examples at all; `--level` caps it.
+
+L1 also carries the shapes layer's own findings — an unresolvable field key, a range contradicting a coercion, an unknown class or shape — because they are errors in the model, located in the model, before any document is involved. See [[metamodel#Shapes]].
 
 ### L0 Well-formedness
 
@@ -36,7 +40,11 @@ Whether the document satisfies the structure the model declares: required proper
 
 A real SHACL engine is the authority, running over the expanded RDF, using the same shapes graph the tool emits. Writing a structural validator against the compacted JSON instead was rejected: it would create two definitions of conformance — the one checked here and the one shipped to consumers — which drift, and it could not see anything that exists only after expansion. The cost is that violations arrive in RDF terms and must be mapped back through the source map before they are shown.
 
-Deferred to milestone 2 with the shapes layer.
+As built: the emitted Turtle is parsed back and run by `rdf-validate-shacl` over the triples [[processing#RDF Conversion#From JSON-LD to RDF|this processor's own conversion]] produced, so every triple has a pointer. Each SHACL constraint component becomes one rule — `L3.min-count`, `L3.max-count`, `L3.datatype`, `L3.node-kind`, `L3.class`, `L3.node`, `L3.closed` — at error severity.
+
+A violation lands where the author would fix it. A value that is there is located at itself; a key a closed shape forbids, and a value that fails a nested shape, at its key; a missing value at the node that lacks it. A nested shape's own violations are reported where they occur, from the engine's `sh:detail`, as well as at the field that reached it. A document in which no node has a targeted class gets `L3.no-target` at info severity, because "no violations" there would read as "conforms".
+
+The engine's `validate()` is asynchronous only to load `owl:imports`, which an emitted shapes graph never declares, so L3 calls the synchronous steps behind it and validation stays synchronous for every caller. A second, independent engine — `shacl-engine` — runs the same emitted graph over RDF from `jsonld.js` in the test suite, and the two must agree.
 
 ### L4 Guidance
 
@@ -60,7 +68,11 @@ The repair is not part of the finding: a finding is a report, and a report that 
 
 Each declared example records the outcome validating it must produce. A positive example must produce no finding above a stated severity; a negative example must produce specific rule ids.
 
-Requiring the ids rather than merely requiring failure is what makes negative examples worth having. A negative example that merely fails passes even when it fails for the wrong reason, which is how a validator quietly stops detecting the thing the example was written to pin down. It also makes the examples double as the validator's regression suite and as teaching material: a document that demonstrates a mistake, alongside the exact finding it should provoke.
+Requiring the ids rather than merely requiring failure is what makes negative examples worth having.
+
+A negative example that raised what it declared does not fail the check: its findings are still reported, because the document is meant to be wrong and the editor should show where, but the check's verdict excludes them. A declared rule above the level being run is not tested by that run rather than failed, so a model whose examples expect L3 findings still checks cleanly at `--level L2`.
+
+ A negative example that merely fails passes even when it fails for the wrong reason, which is how a validator quietly stops detecting the thing the example was written to pin down. It also makes the examples double as the validator's regression suite and as teaching material: a document that demonstrates a mistake, alongside the exact finding it should provoke.
 
 ## Rule Catalog
 

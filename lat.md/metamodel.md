@@ -32,6 +32,16 @@ A term or a type may carry its own context, which changes the active context bel
 
 This is where a key stops meaning one thing. A scoped context is the mechanism by which `name` under a `Person` and `name` under a `Product` may be different properties, and it is the only way JSON-LD offers to do that. It is also the feature most likely to produce a document whose author cannot explain what it means, which is why it is drawn as [[architecture#Panes#Tree pane|a region rather than an annotation]] and why the [[processing#Trace]] records every active-context change.
 
+#### Scoped terms
+
+A scoped context written as a map holds terms of its own. Each entry is resolved by the same term parser as a top-level term — element id, facets, note — to any depth; keyword entries are settings of that context.
+
+The map keeps the `@context` key rather than gaining a new one, so the model still reads like the context it emits, and import has one form to produce. A bare IRI or `null` entry is accepted as a context writes it, and `ldm ids` rewrites it to a mapping so it can carry an id. A `@context` given as an IRI or an array is a reference to someone else's context and holds no terms of this model.
+
+In the IR, scoped terms join the one flat term array with a `scope` naming their parent, and the parent records the map's settings. Flat rather than nested because diffing, the projection, the layout sidecar and rename detection all walk one id-keyed array. Key uniqueness is per map: `name` at the top level and `name` under `publisher` are two terms. The emitter rebuilds the map from settings and scoped terms, dropping ids and notes, and a scoped term without `@id` is emitted as written so a processor reads it against `@vocab` exactly as before.
+
+This is what makes a credential context — almost entirely protected type-scoped contexts — something the canvas can edit rather than an opaque blob.
+
 ### Containers
 
 `@container` governs the JSON shape a value takes — `@list`, `@set`, `@index`, `@id`, `@type`, `@language`, `@graph` — and, with the exception of `@list`, changes no triple.
@@ -56,6 +66,8 @@ Every term, shape and example carries a short generated identifier, backfilled b
 
 Ids are what make a rename a rename. Without them, a key change is indistinguishable from a delete plus an add, which would lose the box's position on every diagram, lose the shape references pointing at it, and — once the lockfile exists — report a breaking change as a removal and an unrelated addition. A file that carries no identifiers yet is read with derived ones, which follow the key: they survive a reload but not a rename, until the tool writes real ones in.
 
+Scoped terms and shapes carry ids too. A scoped term's derived id folds in the keys enclosing it, so it survives a reload but not a rename of its parent — the same contract a top-level derived id has with its own key. A shape field has no id of its own: its identity is its shape plus the element id of the term its key resolves to, which is what lets a term rename carry the field with it.
+
 Ids are written as a targeted splice rather than by re-serialising, for the reason in [[architecture#Editing Surface#Targeted edits]], and the splice is computed from the *key's* range rather than the value's: a term's value is the mapping that starts on the next line, so inserting relative to it puts the id inside the first facet instead of beside it.
 
 ## Namespaces
@@ -72,9 +84,27 @@ That separation is what keeps rename detection working across a version boundary
 
 The shapes layer declares class-level structure: which terms a class uses, their cardinality, their value ranges, and whether the class is open or closed. None of it is expressible in a `@context`.
 
-It is deferred to milestone 2, and it is the unblocker for almost everything after: [[validation#The Ladder#L3 Shape Conformance]], the SHACL target, the frame that pins a JSON shape, the JSON Schema derived from that frame, and the instance overlay on the [[architecture#Panes#Graph pane]]. The terms layer must therefore avoid occupying the names it will need.
+It is the unblocker for almost everything after: [[validation#The Ladder#L3 Shape Conformance]], the [[emitters#Downstream Targets#SHACL Shapes|SHACL target]], the frame that pins a JSON shape, the JSON Schema derived from that frame, and the instance overlay on the [[architecture#Panes#Graph pane]]. The first two ship; the rest remain reachable from it.
 
-One question is settled in advance because it decides the layer's shape: cardinality belongs to a shape, not to a term. A term is global and a class is not, so two classes may legitimately disagree about how many values a property takes. Coercion — `@type`, `@container`, `@language` — belongs to the term, because JSON-LD gives it nowhere else to live.
+One question was settled in advance because it decides the layer's shape: cardinality belongs to a shape, not to a term. A term is global and a class is not, so two classes may legitimately disagree about how many values a property takes. Coercion — `@type`, `@container`, `@language` — belongs to the term, because JSON-LD gives it nowhere else to live.
+
+### A shape and its fields
+
+A shape names a target class — a class term, or an IRI — or none, and says whether it is closed. Its fields are keyed by the JSON key a document uses under the class, each with `min`, `max` and a range.
+
+A range is `iri`, `node`, `literal`, `langString`, a datatype, `{ class }` or `{ shape }`; nesting a shape in a range is how a credential's structure is described. A shape without a target class applies only where a range names it, which is how an untyped nested node — a credential's subject — is described; requiring every shape to have a class was tried and dropped the first time a real credential was modelled.
+
+### Field keys resolve as a processor would
+
+A field key resolves in the active context a processor applies to a node of the target class: the model's context, then the class term's type-scoped context. The processor's own context machinery answers it, never a second resolver.
+
+A model-level lookup was rejected: it would diverge from expansion exactly where expansion is hardest, and L3 would then contradict L1 with nobody able to say which was right. The model's own context is used when the IR is resolved; referenced contexts are consulted again by validation and by the SHACL emitter, where they can be read. When a shape is reached through a field whose term carries a property-scoped context that redefines one of its keys, the key means two things, and that is `L1.shape-field-ambiguous`.
+
+### Shapes own cardinality, terms own coercion
+
+A field may narrow what a key's values must be but never how they are read. A range that contradicts the term's coercion is a finding at the field, and its repair is a type-scoped context, never a quiet change to the shared term.
+
+`L1.shape-range-coercion-conflict` covers a datatype range on a reference-coerced key, a plain-string range on a language map, and the like; `L1.shape-range-needs-id-coercion` warns that a node range on a term with no `@type: @id` accepts only embedded objects, because a string becomes a literal. The canvas offers the repair as a promotion: the class gets its own term for the key, with the shared IRI and the coercion the shape needs, and every other class keeps reading the key as before.
 
 ## Examples
 

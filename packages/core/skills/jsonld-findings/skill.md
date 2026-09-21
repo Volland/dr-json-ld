@@ -37,8 +37,17 @@ reports everything else without blocking you.
   hashes.
 - **L2 — what your documents actually lose.** Runs your example documents
   through expansion and reports what fell out.
+- **L3 — whether your documents have the structure your shapes declare.** Runs
+  only when the model has `shapes:`. Each example is converted to RDF and
+  validated against the SHACL `ldm emit --target shacl` writes. `L3.min-count`,
+  `L3.max-count`, `L3.datatype`, `L3.node-kind`, `L3.class`, `L3.node` and
+  `L3.closed` point at the value or key in the document; a violation inside a
+  nested shape is reported where it occurs, and `L3.node` at the field that
+  reached it. `L3.no-target` (info) means no node was of a class any shape
+  targets, so "no violations" does not mean "conforms".
 
-`--level L0`, `L1` or `L2`; the default is `L2`.
+`--level L0`, `L1`, `L2` or `L3`. Unset, a model with shapes is checked through
+L3 and one without through L2.
 
 ## The findings that matter most
 

@@ -177,6 +177,15 @@ context: |
       and the instance-graph overlay. It is the unblocker for every remaining
       emitter and it completes the validation promise.
 
+  M2 SHIPPED by `shapes-and-structured-contexts`, except the instance-graph
+      overlay: scoped contexts as first-class scoped terms, `shapes:` with fields,
+      cardinality and ranges, L1 shape findings, RDF conversion carrying pointers,
+      the `shacl` target, L3 through `rdf-validate-shacl` (on by default for a
+      model with shapes), shape and scope differences in `ldm diff`, and a shape
+      builder on the canvas. No locked decision was amended; 4 and 6 are now
+      implemented rather than planned. Still open from M2: the instance-graph
+      overlay, and carrying the `shacl` artifact inside a published version.
+
   M3+: frame and JSON Schema as a pair, the vocabulary document, TS types and the
       docs site, RDF import, the guidance catalog, and the extracted shared
       package once duplication with `lpg-modeler` has shown where the seam
@@ -204,10 +213,13 @@ context: |
   These were identified during design and deliberately left open. A change that
   touches one must settle it explicitly rather than assume.
 
-  - A term is global to a context; cardinality is local to a class. When two shapes
-    use one term with different cardinality, shapes own cardinality and terms own
-    coercion - but the metamodel spec must say so before M2 begins.
-  - How a scoped context is created on the canvas, as opposed to how it is drawn.
+  - SETTLED by `shapes-and-structured-contexts`: shapes own cardinality, terms own
+    coercion. A field may narrow what a key's values must be, never how they are
+    read; a range contradicting the term's coercion is an L1 finding at the field,
+    and its repair is a type-scoped context, never a quiet change to the shared term.
+  - SETTLED by `shapes-and-structured-contexts`: a scoped context is created on the
+    canvas by adding a scoped term to a term in the inspector, or by accepting the
+    shape builder's offer to promote a key into a class's type-scoped context.
   - Whether named graphs and `@graph` are in the metamodel at all.
   - SETTLED by `add-jsonld-context-modeler`: the two panes do **not** share a
     layout sidecar. The tree pane persists no coordinates - its layout is derived
@@ -297,6 +309,44 @@ context: |
     - In compaction, a candidate compact IRI that is already a defined term is
       safe in an `@id` position and unsafe in a property position: there the term
       may carry a coercion that does not apply to the value being compacted.
+
+  ### Shapes, SHACL and RDF conversion, as of change `shapes-and-structured-contexts`
+
+    - Closing the type-scoped reversion gaps (`tc012`, `tc019`, `tc024`, `tc028`)
+      took expand from 336 to 341 of 376 attempted and the differential from 256
+      to 261 agreeing cases. Two causes: a property-scoped context must be read
+      from the context the property was expanded in, *before* a non-propagating
+      context reverts (API 5.1.2 step 3); and an embedded map carrying
+      `@propagate: false` must record its revert target itself (4.1 steps 3-4).
+    - `toRdf` suite: 415 of 444 attempted. Every failure is an expansion gap shared
+      with the expand class, none a conversion bug. Compared after URDNA2015.
+    - `toRdf` differential: 320 agree, 14 diverge. This processor matches the suite
+      and `jsonld.js` does not on 5 (`tc037`, `te111`, `te112`, `tli12`, `twf05`);
+      on `tli12` and `twf05` `jsonld.js` writes an IRI it should have dropped
+      straight into N-Quads that no parser accepts.
+    - IRI resolution had to become RFC 3986 section 5.2 on the strings. The WHATWG
+      `URL` parser used before percent-encodes, lower-cases hosts and turns `//g`
+      against `http://a/b` into `http://g/`; each changes a triple. A string can
+      pass the absolute-IRI test and still not be an IRI (whitespace, `<>`, a
+      second `#`); RDF conversion drops those, as the algorithm requires.
+    - `shacl-engine` 1.1.2 depends on Comunica for SHACL-SPARQL, so it was demoted
+      to a test-only cross-check and `rdf-validate-shacl` became the authority.
+      Both report a nested `sh:node` violation as detail, offline, and agreed on
+      every credential fixture.
+    - `rdf-validate-shacl`'s `validate()` is async only to load `owl:imports`; the
+      synchronous steps behind it are called directly, keeping `validateModel`
+      synchronous for every caller. A release moving them fails the tests.
+    - The engine's result getters return `null`, not `undefined`, for an absent
+      value or path.
+    - The bundled `extension.cjs` grew from 215 KB to 668 KB; the CLI gains about
+      2.5 MB of installed dependencies. L3 ran unchanged from a CommonJS bundle.
+    - A shape needing a target class was wrong for real credentials: a
+      credential's subject is untyped. `targetClass` is optional; such a shape
+      applies only where a field's range names it.
+    - A negative example raising declared *error* findings failed the whole check,
+      which made L3 negatives impossible. A met negative example's declared
+      findings are now reported but excluded from the verdict, and a declared rule
+      above the level being run is not tested by that run.
 
   ### Emitters, as built
 

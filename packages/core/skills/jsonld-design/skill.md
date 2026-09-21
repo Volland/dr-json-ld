@@ -54,13 +54,31 @@ Person".
 
 Consequences worth knowing before you fight them:
 
-- Two classes needing the same key with different meanings is not expressible.
-  Either they are the same property, or they need different keys.
+- Two classes needing the same key with different meanings is not a second
+  top-level term. It is a *type-scoped context*: the class term carries its own
+  `@context` with its own `name`, which applies below a node of that type. The
+  canvas offers this as a promotion when two shapes disagree about a key.
 - A key that appears only inside one nested structure still gets a global term.
   If you want it to mean something different in that position, that is a
   *scoped context* on the enclosing term, not a second definition.
 - A key that no document will ever contain does not need a term. A vocabulary
   is not an ontology; it is the set of keys your documents type.
+
+## Structure belongs to shapes
+
+Which fields a class has, and how many values each takes, is not something a
+`@context` can say. Declare it under `shapes:`. Keep the split clean: a shape
+states cardinality and what a value must be; the term states how a key is read.
+When a shape's range and a term's coercion disagree the shape is describing
+values the context cannot produce, and `ldm check` says so at the field.
+
+A shape with no target class describes a nested node that has no type of its
+own — a credential's subject is the usual example — and applies only where a
+field's range names it.
+
+Once a model has shapes, its examples are conformance tests. `ldm check` runs
+them through L3, and `ldm emit --target shacl` writes the shapes graph a
+consumer can run to get the same verdict.
 
 ## Coercion is the decision people get wrong
 

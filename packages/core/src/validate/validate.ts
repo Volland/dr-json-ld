@@ -18,16 +18,23 @@ import {
   type Level,
   type Severity,
 } from '../findings/finding.js'
-import type { Ir, IrExample, IrTerm } from '../model/ir.js'
+import { findTerm, scopedTermsOf, topLevelTerms, type Ir, type IrExample, type IrTerm } from '../model/ir.js'
 import { resolveModel } from '../model/resolve.js'
+import { checkShapes, reportShapeViewCoverage } from '../shapes/check.js'
+import { toRdf } from '../processor/to-rdf.js'
+import { checkConformance, prepareShapes, type PreparedShapes } from './conformance.js'
+import { resolveShapeFieldsIn } from '../shapes/fields.js'
 import { activeContextForModel } from '../processor/api.js'
 import { expand, type Observation } from '../processor/expand.js'
 import { JsonLdError, type ActiveContext } from '../processor/types.js'
 import { SourceIndex } from '../source/index-file.js'
-import { pointerLast, pointerRoot, type JsonPointer } from '../source/pointer.js'
+import { pointerLast, pointerRoot, pointerTokens, type JsonPointer } from '../source/pointer.js'
 
 export interface ValidateOptions {
-  /** The highest level to run. A command names it, and the report repeats it. */
+  /**
+   * The highest level to run. A command names it, and the report repeats it.
+   * Unset, a model with shapes is checked through L3 and one without through L2.
+   */
   level?: Level
   /** Reads a vendored context. Offline; there is no fetch on this path. */
   resolveContext?: (iri: string) => unknown
@@ -65,7 +72,7 @@ export class LevelNotAvailable extends Error {
   readonly level: string
   constructor(level: string) {
     super(
-      `Validation level ${level} is not available. This release implements L0, L1 and L2; L3 needs the shapes layer and a SHACL engine, and L4 needs the rule catalog.`,
+      `Validation level ${level} is not available. This release implements L0 to L3; L4 needs the rule catalog.`,
     )
     this.name = 'LevelNotAvailable'
     this.level = level
@@ -84,15 +91,18 @@ export function validateModel(
   source: SourceIndex,
   options: ValidateOptions = {},
 ): ValidationReport {
-  const level = options.level ?? 'L2'
-  if (LEVEL_ORDER[level] > LEVEL_ORDER['L2']) throw new LevelNotAvailable(level)
+  if (options.level !== undefined && LEVEL_ORDER[options.level] > LEVEL_ORDER['L3']) {
+    throw new LevelNotAvailable(options.level)
+  }
 
   const findings = new FindingCollector()
 
   // ---- L0: the model file is a valid model -------------------------------
   const resolved = resolveModel(source)
   findings.addAll(resolved.findings)
-  const ir = resolved.ir
+  let ir = resolved.ir
+  // A model with shapes makes every positive example a conformance test.
+  const level: Level = options.level ?? (ir !== undefined && ir.shapes.length > 0 ? 'L3' : 'L2')
   if (!ir) {
     return finish(level, findings.all(), [], undefined)
   }
@@ -107,23 +117,48 @@ export function validateModel(
     checkVendored(ir, source, findings, options)
     checkUpstreamCollisions(ir, source, findings, options)
     active = buildContext(ir, source, findings, options)
+    // Field keys are resolved again against the full context, referenced
+    // contexts included, now that they can be read.
+    if (active !== undefined && ir.shapes.length > 0) {
+      ir = { ...ir, shapes: resolveShapeFieldsIn(ir, active) }
+      checkShapes(ir, active, source, findings)
+    }
   }
 
   // ---- L2: what documents lose, and what the model leaves unexercised -----
   const examples: ExampleOutcome[] = []
   if (LEVEL_ORDER[level] >= LEVEL_ORDER['L2'] && active) {
+    // ---- L3: the shapes graph the `shacl` target emits, run by an engine ---
+    const shapes =
+      LEVEL_ORDER[level] >= LEVEL_ORDER['L3']
+        ? prepareShapes(ir, {
+            source,
+            ...(options.resolveContext !== undefined
+              ? { resolveContext: options.resolveContext }
+              : {}),
+          })
+        : undefined
     const used = new Set<string>()
     for (const example of ir.examples) {
-      examples.push(runExample(ir, example, active, source, options, used))
+      examples.push(runExample(ir, example, active, source, options, used, level, shapes))
     }
     reportCoverage(ir, used, source, findings)
     reportViewCoverage(ir, source, findings)
+    reportShapeViewCoverage(ir, source, findings)
   }
 
+  // A negative example that raised what it declared has done its job. Its
+  // findings are still reported — the document is meant to be wrong, and the
+  // editor shows where — but they do not fail the check.
+  const expected = new Set<Finding>()
   for (const outcome of examples) {
     findings.addAll(outcome.findings)
+    const example = ir.examples.find((e) => e.path === outcome.path)
+    if (outcome.met && example?.expect.kind === 'negative') {
+      const declared = new Set(example.expect.rules)
+      for (const finding of outcome.findings) if (declared.has(finding.ruleId)) expected.add(finding)
+    }
     if (!outcome.met) {
-      const example = ir.examples.find((e) => e.path === outcome.path)
       findings.raise(
         'L0.example-outcome-unmet',
         source,
@@ -134,7 +169,7 @@ export function validateModel(
     }
   }
 
-  return finish(level, atOrBelowLevel(findings.all(), level), examples, ir)
+  return finish(level, atOrBelowLevel(findings.all(), level), examples, ir, expected)
 }
 
 function finish(
@@ -142,6 +177,7 @@ function finish(
   findings: Finding[],
   examples: ExampleOutcome[],
   ir: Ir | undefined,
+  expected: ReadonlySet<Finding> = new Set(),
 ): ValidationReport {
   const ordered = sortFindings(findings)
   return {
@@ -149,7 +185,7 @@ function finish(
     findings: ordered,
     examples,
     ...(ir !== undefined ? { ir } : {}),
-    failed: hasErrors(ordered),
+    failed: hasErrors(ordered.filter((f) => !expected.has(f))),
   }
 }
 
@@ -231,6 +267,10 @@ function buildContext(
  * which is often a facet value rather than a term.
  */
 function termForContextError(ir: Ir, error: JsonLdError): IrTerm | undefined {
+  if (error.pointer !== undefined) {
+    const scoped = termAtContextPointer(ir, error.pointer)
+    if (scoped) return scoped
+  }
   const fromPointer = error.pointer === undefined ? undefined : pointerLast(error.pointer)
   if (fromPointer !== undefined) {
     const byPointer = ir.terms.find((t) => t.key === fromPointer)
@@ -240,6 +280,28 @@ function termForContextError(ir: Ir, error: JsonLdError): IrTerm | undefined {
   const name = quoted?.[1]
   if (name === undefined) return undefined
   return ir.terms.find((t) => t.key === name)
+}
+
+/**
+ * The deepest term a pointer into the emitted context names, following
+ * `<key>/@context/<key>` down through scoped contexts. The same key at two
+ * depths is two terms, so the last segment alone cannot say which.
+ */
+function termAtContextPointer(ir: Ir, pointer: JsonPointer): IrTerm | undefined {
+  const tokens = pointerTokens(pointer)
+  // Skip the document's own `@context` and, in the array form, the layer index.
+  let i = tokens[0] === '@context' ? 1 : 0
+  if (i < tokens.length && /^[0-9]+$/.test(tokens[i]!)) i++
+  const top = findTerm(ir, tokens[i] ?? '')
+  if (top === undefined) return undefined
+  let found: IrTerm = top
+  for (i += 1; i + 1 < tokens.length && tokens[i] === '@context'; i += 2) {
+    const key = tokens[i + 1]
+    const child: IrTerm | undefined = scopedTermsOf(ir, found.id).find((t) => t.key === key)
+    if (child === undefined) break
+    found = child
+  }
+  return found
 }
 
 function ruleForCode(code: string) {
@@ -288,7 +350,7 @@ function checkUpstreamCollisions(
     const upstream = flattenContext(inner)
     if (!upstream) continue
 
-    for (const term of ir.terms) {
+    for (const term of topLevelTerms(ir)) {
       const theirs = upstream[term.key]
       if (theirs === undefined) continue
       const theirIri = definitionIri(theirs)
@@ -348,6 +410,8 @@ function runExample(
   modelSource: SourceIndex,
   options: ValidateOptions,
   used: Set<string>,
+  level: Level,
+  shapes?: PreparedShapes,
 ): ExampleOutcome {
   const findings = new FindingCollector()
 
@@ -387,6 +451,7 @@ function runExample(
       ordered: true,
     })
     observations = result.observations
+    if (shapes !== undefined) checkConformance(shapes, toRdf(result.expanded), source, findings)
   } catch (error) {
     if (!(error instanceof JsonLdError)) throw error
     findings.raise(
@@ -409,7 +474,12 @@ function runExample(
     return outcome(example, produced, tooLoud.length === 0, [], tooLoud.map((f) => f.ruleId))
   }
 
-  const declared = example.expect.rules
+  // A rule above the level being run cannot be raised by this run, so an
+  // expectation of one is not tested here rather than failed.
+  const declared = example.expect.rules.filter((r) => {
+    const ruleLevel = /^(L[0-4])\./.exec(r)?.[1] as Level | undefined
+    return ruleLevel === undefined || LEVEL_ORDER[ruleLevel] <= LEVEL_ORDER[level]
+  })
   const missing = declared.filter((r) => !ids.has(r))
   const unexpected = [...ids].filter((id) => !declared.includes(id)).sort()
   return outcome(example, produced, missing.length === 0, missing, unexpected)
@@ -541,7 +611,9 @@ function reportCoverage(
 function reportViewCoverage(ir: Ir, source: SourceIndex, findings: FindingCollector): void {
   if (ir.views.length === 0) return
   const shown = new Set(ir.views.flatMap((v) => v.terms))
-  for (const term of ir.terms) {
+  // A scoped term is drawn inside the region of the term that holds it, so it is
+  // visible wherever that term is.
+  for (const term of topLevelTerms(ir)) {
     if (shown.has(term.key)) continue
     findings.raise(
       'L2.term-in-no-view',

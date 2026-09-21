@@ -1,11 +1,10 @@
 # W3C JSON-LD 1.1 conformance — expand
 
-Cases: 385. Passed: 336. Failed: 40. Skipped: 9.
+Cases: 385. Passed: 341. Failed: 35. Skipped: 9.
 
 ## Out of scope for this change
 
 - `frame` — not implemented by this milestone; reported rather than skipped silently.
-- `toRdf` — not implemented by this milestone; reported rather than skipped silently.
 - `fromRdf` — not implemented by this milestone; reported rather than skipped silently.
 - `flatten` — not implemented by this milestone; reported rather than skipped silently.
 - `html` — not implemented by this milestone; reported rather than skipped silently.
@@ -17,11 +16,7 @@ Cases: 385. Passed: 336. Failed: 40. Skipped: 9.
 - `#t0116` Verifies that relative IRIs as properties with relative @vocab in 1.0 generate an error — expected the error "invalid vocab mapping" and none was raised
 - `#t0123` Value objects including invalid literal datatype IRIs are rejected — expected the error "invalid typed value" and none was raised
 - `#t0131` Reverse term with property based indexed container — output differs from the expected document
-- `#tc012` deep property-term scoped @context in @type-scoped @context affects nested nodes — output differs from the expected document
 - `#tc013` type maps use scoped context from type index and not scoped context from containing — output differs from the expected document
-- `#tc019` type-scoped context with multiple property scoped terms — output differs from the expected document
-- `#tc024` type-scoped + property-scoped + values evaluates against previous context — output differs from the expected document
-- `#tc028` @propagate: false on embedded context — output differs from the expected document
 - `#tc031` @context resolutions respects relative URLs. — threw: loading remote context failed: http://example.org/a/c031/c031-context.jsonld has not been vendored. Run `ldm vendor` — no command other than the vendor refresh touches the network.
 - `#tc038` Bibframe example (poor-mans inferrence) — output differs from the expected document
 - `#tec02` Term definition on @type with empty map — expected the error "keyword redefinition" and none was raised
@@ -49,7 +44,6 @@ Cases: 385. Passed: 336. Failed: 40. Skipped: 9.
 - `#tpr18` Fail to override protected terms with type+null+ctx. — expected the error "invalid context nullification" and none was raised
 - `#tpr20` Fail with mix of protected and unprotected terms with type+null+ctx. — expected the error "invalid context nullification" and none was raised
 - `#tpr21` Fail with mix of protected and unprotected terms with type+null. — expected the error "invalid context nullification" and none was raised
-- `#tpr25` Allows redefinition of terms with scoped contexts using same definitions. — output differs from the expected document
 - `#tso05` @propagate: true on type-scoped context with @import — threw: invalid scoped context: invalid remote context: https://w3c.github.io/json-ld-api/tests/expand/so05-context.jsonld has not been vendored. Run `ldm vendor` — no command other than the vendor refresh touches the network.
 - `#tso06` @propagate: false on property-scoped context with @import — threw: invalid scoped context: invalid remote context: https://w3c.github.io/json-ld-api/tests/expand/so06-context.jsonld has not been vendored. Run `ldm vendor` — no command other than the vendor refresh touches the network.
 

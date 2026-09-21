@@ -102,15 +102,28 @@ describe('usage errors', () => {
   it('exits 2 on a bad flag value', async () => {
     const { io, err } = workspace({ 'm.jsonld.yaml': CLEAN_MODEL })
     expect(await run(['check', 'm.jsonld.yaml', '--level', 'L9'], io)).toBe(EXIT_USAGE)
-    expect(err.join('\n')).toContain('--level must be L0, L1 or L2')
-    expect(await run(['emit', 'm.jsonld.yaml', '--target', 'shacl'], io)).toBe(EXIT_USAGE)
-    expect(err.join('\n')).toContain('--target must be context or context-inline')
+    expect(err.join('\n')).toContain('--level must be L0, L1, L2 or L3')
+    expect(await run(['emit', 'm.jsonld.yaml', '--target', 'frame'], io)).toBe(EXIT_USAGE)
+    expect(err.join('\n')).toContain('--target must be context, context-inline or shacl')
   })
 
-  it('reports that L3 is not available rather than checking it', async () => {
+  it('reports that L4 is not available rather than checking it', async () => {
     const { io, err } = workspace({ 'm.jsonld.yaml': CLEAN_MODEL })
-    expect(await run(['check', 'm.jsonld.yaml', '--level', 'L3'], io)).toBe(EXIT_USAGE)
+    expect(await run(['check', 'm.jsonld.yaml', '--level', 'L4'], io)).toBe(EXIT_USAGE)
     expect(err.join('\n')).toContain('not available')
+  })
+
+  it('checks through L3 by default when the model declares shapes, and --level caps it', async () => {
+    const shaped = CLEAN_MODEL.replace(
+      /\nexamples:/,
+      '\nshapes:\n  Named:\n    id: shp001\n    targetClass: https://example.org/ns#Thing\n    fields:\n      name: { min: 1 }\nexamples:',
+    )
+    const typed = JSON.stringify({ '@id': 'https://example.org/1', '@type': 'https://example.org/ns#Thing' })
+    const full = workspace({ 'm.jsonld.yaml': shaped, 'docs/ok.json': typed })
+    expect(await run(['check', 'm.jsonld.yaml'], full.io)).toBe(EXIT_FINDINGS)
+    expect(full.out.join('\n'), full.out.join('\n')).toContain('L3.min-count')
+    const capped = workspace({ 'm.jsonld.yaml': shaped, 'docs/ok.json': typed })
+    expect(await run(['check', 'm.jsonld.yaml', '--level', 'L2'], capped.io)).toBe(EXIT_OK)
   })
 })
 
@@ -171,6 +184,18 @@ describe('ldm emit', () => {
     expect(readFileSync(join(root, 'build', 'm.inline.jsonld'), 'utf8')).toContain(
       'Target: context-inline',
     )
+  })
+
+  it('writes the shacl target as Turtle, to its own file', async () => {
+    const shaped = CLEAN_MODEL.replace(
+      /\nexamples:/,
+      '\nshapes:\n  Named:\n    id: shp001\n    targetClass: https://example.org/ns#Thing\n    fields:\n      name: { min: 1 }\nexamples:',
+    )
+    const { root, io } = workspace({ 'm.jsonld.yaml': shaped })
+    expect(await run(['emit', 'm.jsonld.yaml', '--target', 'shacl', '--out', 'build'], io)).toBe(EXIT_OK)
+    const written = readFileSync(join(root, 'build', 'm.shacl.ttl'), 'utf8')
+    expect(written).toContain('# Target: shacl')
+    expect(written).toContain('sh:minCount 1')
   })
 
   it('prints to stdout with no --out', async () => {

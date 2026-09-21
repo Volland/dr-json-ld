@@ -254,7 +254,7 @@ describe('the five change classes', () => {
       diff((t) =>
         t.replace(
           '    "@id": ex:name\n',
-          '    "@id": ex:name\n    "@context":\n      inner: https://example.org/ns#inner\n',
+          '    "@id": ex:name\n    "@context":\n      inner: { id: ddd444, "@id": https://example.org/ns#inner }\n',
         ),
       ),
       'name.@context',
@@ -271,6 +271,156 @@ describe('the five change classes', () => {
     )
     expect(d.class).toBe('breaking')
     expect(d.ambiguous).toBe(true)
+  })
+})
+
+describe('scoped terms', () => {
+  const SCOPED = BASE.replace(
+    '    "@id": ex:author\n    "@type": "@id"\n',
+    '    "@id": ex:author\n    "@type": "@id"\n    "@context":\n      "@protected": true\n      label: { id: eee555, "@id": ex:authorLabel }\n',
+  )
+  const compareScoped = (edit: (text: string) => string) =>
+    compareVersions(irOf(SCOPED), irOf(edit(SCOPED))).differences
+
+  it('are matched by element id and classified as terms are', () => {
+    const d = only(
+      compareScoped((t) => t.replace('ex:authorLabel', 'ex:byline')),
+      'author › label',
+    )
+    expect(d.kind).toBe('term-iri-changed')
+    expect(d.class).toBe('semantic')
+  })
+
+  it('reports a new scoped term as additive, named by its path', () => {
+    const d = only(
+      compareScoped((t) =>
+        t.replace(
+          '      label: { id: eee555, "@id": ex:authorLabel }\n',
+          '      label: { id: eee555, "@id": ex:authorLabel }\n      sortAs: { id: fff666, "@id": ex:sortAs }\n',
+        ),
+      ),
+      'author › sortAs',
+    )
+    expect(d.class).toBe('additive')
+  })
+
+  it('treats removing a term from a protected scoped context as illegal', () => {
+    const d = only(
+      compareScoped((t) => t.replace('      label: { id: eee555, "@id": ex:authorLabel }\n', '')),
+      'author › label',
+    )
+    expect(d.kind).toBe('term-removed')
+    expect(d.class).toBe('illegal')
+  })
+
+  it('classifies promoting a key into a scoped context as breaking, naming both scopes', () => {
+    // `name` keeps its element id and moves under `author`.
+    const moved = SCOPED.replace('  name:\n    id: aaa111\n    "@id": ex:name\n', '').replace(
+      '      label: { id: eee555, "@id": ex:authorLabel }\n',
+      '      label: { id: eee555, "@id": ex:authorLabel }\n      name: { id: aaa111, "@id": ex:name }\n',
+    )
+    const d = only(compareVersions(irOf(SCOPED), irOf(moved)).differences, 'author › name')
+    expect(d.kind).toBe('term-scope-changed')
+    expect(d.class).toBe('breaking')
+    expect(d.before).toBe('the top level')
+    expect(d.after).toBe('the scoped context of "author"')
+  })
+
+  it('reports a change to a scoped context setting as ambiguous and breaking', () => {
+    const d = only(
+      compareScoped((t) => t.replace('      "@protected": true\n', '      "@propagate": false\n')),
+      'author.@context',
+    )
+    expect(d.class).toBe('breaking')
+    expect(d.ambiguous).toBe(true)
+  })
+
+  it('compares against a lockfile from before scoped terms as a whole value, and says so', () => {
+    // What an older lockfile recorded: the scoped map as one opaque value.
+    const legacy = JSON.parse(serializeIr(irOf(SCOPED))) as {
+      terms: Array<Record<string, unknown>>
+    }
+    legacy.terms = legacy.terms
+      .filter((t) => t['scope'] === undefined)
+      .map((t) => {
+        if (t['scopedContext'] === undefined) return t
+        const { scopedContext: _s, ...rest } = t
+        return { ...rest, '@context': { '@protected': true, label: 'ex:authorLabel' } }
+      })
+    const older = parseLockfile(JSON.stringify(legacy))
+
+    const same = compareVersions(older, irOf(SCOPED))
+    expect(same.differences).toEqual([])
+    expect(same.notes.join(' ')).toContain('could not be matched individually')
+
+    const changed = compareVersions(older, irOf(SCOPED.replace('ex:authorLabel', 'ex:byline')))
+    const d = only(changed.differences, 'author.@context')
+    expect(d.class).toBe('breaking')
+    expect(d.ambiguous).toBe(true)
+  })
+})
+
+describe('shapes', () => {
+  const SHAPED = BASE.replace(
+    'examples: []\n',
+    `shapes:
+  Named:
+    id: sha001
+    targetClass: ex:Thing
+    fields:
+      name: { min: 1, max: 2, range: node }
+      author: { range: iri }
+examples: []
+`,
+  )
+  const compareShaped = (edit: (text: string) => string) =>
+    compareVersions(irOf(SHAPED), irOf(edit(SHAPED))).differences
+
+  it('are matched by element id, and a rename is compatible', () => {
+    const d = only(compareShaped((t) => t.replace('  Named:\n', '  Labelled:\n')), 'Labelled')
+    expect(d.kind).toBe('shape-changed')
+    expect(d.class).toBe('compatible')
+  })
+
+  it('classify a new shape for a new class as additive', () => {
+    const added = SHAPED.replace(
+      'examples: []\n',
+      '  Other:\n    id: sha002\n    targetClass: ex:Brand\n    fields:\n      name: { min: 1 }\nexamples: []\n',
+    )
+    const d = only(compareVersions(irOf(SHAPED), irOf(added)).differences, 'Other')
+    expect(d.class).toBe('additive')
+  })
+
+  it('classify a new shape for a class the older version declared as breaking', () => {
+    const added = SHAPED.replace(
+      'examples: []\n',
+      '  Authored:\n    id: sha002\n    targetClass: author\n    fields:\n      name: { min: 1 }\nexamples: []\n',
+    )
+    const d = only(compareVersions(irOf(SHAPED), irOf(added)).differences, 'Authored')
+    expect(d.class).toBe('breaking')
+  })
+
+  it('classify tightening as breaking and loosening as compatible', () => {
+    expect(only(compareShaped((t) => t.replace('min: 1, max: 2', 'min: 2, max: 2')), 'Named.name.min').class).toBe('breaking')
+    expect(only(compareShaped((t) => t.replace('min: 1, max: 2', 'min: 0, max: 2')), 'Named.name.min').class).toBe('compatible')
+    expect(only(compareShaped((t) => t.replace('min: 1, max: 2', 'min: 1, max: 1')), 'Named.name.max').class).toBe('breaking')
+    expect(only(compareShaped((t) => t.replace('min: 1, max: 2, ', 'min: 1, ')), 'Named.name.max').class).toBe('compatible')
+    expect(only(compareShaped((t) => t.replace('range: node', 'range: iri')), 'Named.name.range').class).toBe('breaking')
+    expect(only(compareShaped((t) => t.replace('author: { range: iri }', 'author: { range: node }')), 'Named.author.range').class).toBe('compatible')
+    expect(only(compareShaped((t) => t.replace('targetClass: ex:Thing\n', 'targetClass: ex:Thing\n    closed: true\n')), 'Named.closed').class).toBe('breaking')
+    expect(only(compareShaped((t) => t.replace('      author: { range: iri }\n', '')), 'Named.author').class).toBe('compatible')
+  })
+
+  it('classify a range that is neither narrower nor wider as ambiguous and breaking', () => {
+    const d = only(compareShaped((t) => t.replace('author: { range: iri }', 'author: { range: xsd:string }').replace('prefixes:\n', 'prefixes:\n  xsd: http://www.w3.org/2001/XMLSchema#\n')), 'Named.author.range')
+    expect(d.class).toBe('breaking')
+    expect(d.ambiguous).toBe(true)
+  })
+
+  it('refuse a shape with a derived id', () => {
+    expect(() => compareVersions(irOf(SHAPED), irOf(SHAPED.replace('    id: sha001\n', '')))).toThrow(
+      CompareRefused,
+    )
   })
 })
 

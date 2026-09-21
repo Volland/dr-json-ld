@@ -81,8 +81,8 @@ document rather than for an example in a specification.
 
 | | |
 | --- | --- |
-| `ldm check <model>` | Run the validation ladder — `--level L0\|L1\|L2`, `--json` |
-| `ldm emit <model>` | Generate the `@context` — `--target context\|context-inline`, `--out <dir>` |
+| `ldm check <model>` | Run the validation ladder — `--level L0\|L1\|L2\|L3`, `--json`; through L3 by default when the model has shapes |
+| `ldm emit <model>` | Generate an artifact — `--target context\|context-inline\|shacl`, `--out <dir>` |
 | `ldm import <context>` | Turn an existing `@context` into a model — `--out <model>` |
 | `ldm vendor <model>` | Fetch referenced contexts once and hash them — `--check` |
 | `ldm explain <model> <doc>` | Why the document means that — `--trace` |
@@ -245,9 +245,8 @@ produced it — and no library exposes that.
 
 ## Not in this release
 
-The shapes layer and everything that consumes it — SHACL, framing, JSON Schema,
-the vocabulary document, generated types. Validation L3 and L4. RDF to JSON-LD
-conversion. Uploading to a host, or signing anything: a checksum detects accident
+Framing, JSON Schema, the vocabulary document, generated types. Validation L4.
+RDF to JSON-LD conversion. Uploading to a host, or signing anything: a checksum detects accident
 and casual tampering; it is not a signature, and nothing here implies otherwise.
 
 Deferred is not cancelled — each is reachable from the current design, and the
